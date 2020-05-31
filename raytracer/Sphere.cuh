@@ -1,10 +1,10 @@
 /*
 	Sphere - Sam Collier
 */
-#ifndef  SPHEREH
+#ifndef SPHEREH
 #define SPHEREH
 
-#include "Intersect.cuh"
+#include "Hitable.cuh"
 
 class Sphere : public Hitable
 {
@@ -12,6 +12,7 @@ public:
 	__device__ Sphere() {}
 	__device__ Sphere(Vector3 cen, float r, Material* m) : centre(cen), radius(r), matPtr(m) {};
 	__device__ virtual bool hit(const Ray &r, float tmin, float tmax, Intersect &rec) const;
+	__device__ virtual bool boundingBox(float t0,float t1,Aabb &box) const;
 	Vector3 centre;
 	float radius;
 	Material* matPtr;
@@ -27,7 +28,7 @@ __device__ bool Sphere::hit(const Ray &r, float tMin, float tMax, Intersect &rec
 	if (discrim > 0)
 	{
 		float temp = (-b - sqrt(discrim)) / (2*a);
-		if (temp<tMax && temp>tMin)
+		if (temp<tMax&&temp>tMin)
 		{
 			rec.t = temp;
 			rec.p = r.pointAtParameter(rec.t);
@@ -36,7 +37,7 @@ __device__ bool Sphere::hit(const Ray &r, float tMin, float tMax, Intersect &rec
 			return true;
 		}
 		temp = (-b + sqrt(discrim)) / (2*a);
-		if (temp<tMax && temp>tMin)
+		if (temp<tMax&&temp>tMin)
 		{
 			rec.t = temp;
 			rec.p = r.pointAtParameter(rec.t);
@@ -46,6 +47,12 @@ __device__ bool Sphere::hit(const Ray &r, float tMin, float tMax, Intersect &rec
 		}
 	}
 	return false;
+}
+
+__device__ bool Sphere::boundingBox(float t0, float t1, Aabb &box) const
+{
+	box = Aabb(centre - Vector3(radius, radius, radius), centre + Vector3(radius, radius, radius));
+	return true;
 }
 
 class MovingSphere : public Sphere
@@ -76,7 +83,7 @@ __device__ bool MovingSphere::hit(const Ray &r, float tMin, float tMax, Intersec
 	if (discrim > 0)
 	{
 		float temp = (-b - sqrt(discrim)) / (2 * a);
-		if (temp<tMax && temp>tMin)
+		if (temp<tMax&&temp>tMin)
 		{
 			rec.t = temp;
 			rec.p = r.pointAtParameter(rec.t);
@@ -85,7 +92,7 @@ __device__ bool MovingSphere::hit(const Ray &r, float tMin, float tMax, Intersec
 			return true;
 		}
 		temp = (-b + sqrt(discrim)) / (2 * a);
-		if (temp<tMax && temp>tMin)
+		if (temp<tMax&&temp>tMin)
 		{
 			rec.t = temp;
 			rec.p = r.pointAtParameter(rec.t);

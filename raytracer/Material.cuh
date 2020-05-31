@@ -6,7 +6,8 @@
 
 struct Intersect;
 #include "Ray.cuh"
-#include "Intersect.cuh"
+#include "Hitable.cuh"
+#include "Texture.cuh"
 
 __device__ float schlick(float cosine, float refIdx)
 {
@@ -15,7 +16,7 @@ __device__ float schlick(float cosine, float refIdx)
 	return r0 + (1.f - r0) * pow((1.f - cosine), 5.f);
 }
 
-__device__ bool refract(const Vector3& v, const Vector3& n, float niOverNt, Vector3& refracted)
+__device__ bool refract(const Vector3 &v, const Vector3 &n, float niOverNt, Vector3 &refracted)
 {
 	Vector3 uv = unitVector(v);
 	float dt = dot(uv, n);
@@ -38,53 +39,53 @@ __device__ Vector3 randomInUnitSphere(curandState* localRandState)
 	return p;
 }
 
-__device__ Vector3 reflect(const Vector3& v, const Vector3& n) { return v - 2.f * dot(v, n) * n; }
+__device__ Vector3 reflect(const Vector3 &v, const Vector3 &n) { return v - 2.f * dot(v, n) * n; }
 
 class Material
 {
 public:
-	__device__ virtual bool scatter(const Ray& rIn, const Intersect& rec, Vector3& attenuation, Ray& scattered, curandState* localRandState)const = 0;
+	__device__ virtual bool scatter(const Ray &rIn, const Intersect &rec, Vector3 &attenuation, Ray &scattered, curandState* localRandState)const = 0;
 };
 
-class lambert : public Material
+class Lambert : public Material
 {
 public:
-	Vector3 albedo;
-	__device__ lambert(const Vector3& a) : albedo(a) {}
-	__device__ virtual bool scatter(const Ray& rIn, const Intersect& rec, Vector3& attenuation, Ray& scattered, curandState* localRandState) const
+	Texture* albedo;
+	__device__ Lambert(Texture* a) : albedo(a) {}
+	__device__ virtual bool scatter(const Ray &rIn, const Intersect &rec, Vector3 &attenuation, Ray &scattered, curandState* localRandState) const
 	{
 		Vector3 target = rec.p + rec.normal + randomInUnitSphere(localRandState);
 		scattered = Ray(rec.p, target - rec.p,rIn.time());
-		attenuation = albedo;
+		attenuation = albedo->value(0,0,rec.p);
 		return true;
 	}
 };
 
-class metal : public Material
+class Metal : public Material
 {
 public:
-	__device__ metal(const Vector3& a, float f)
+	__device__ Metal(Texture* a, float f)
 	{ 
 		albedo = a;
 		if (f < 1)fuzz = f; else fuzz = 1; 
 	}
-	__device__ virtual bool scatter(const Ray& rIn, const Intersect& rec, Vector3& attenuation, Ray& scattered, curandState* localRandState) const
+	__device__ virtual bool scatter(const Ray &rIn, const Intersect &rec, Vector3 &attenuation, Ray &scattered, curandState* localRandState) const
 	{
 		Vector3 reflected = reflect(unitVector(rIn.direction()), rec.normal);
 		scattered = Ray(rec.p, reflected + fuzz * randomInUnitSphere(localRandState),rIn.time());
-		attenuation = albedo;
+		attenuation = albedo->value(0,0,rec.p);
 		return (dot(scattered.direction(), rec.normal) > 0.f);
 	}
-	Vector3 albedo;
+	Texture* albedo;
 	float fuzz;
 };
 
-class dielectric : public Material
+class Dielectric : public Material
 {
 public:
 	float refIdx;
-	__device__ dielectric(float ri) : refIdx(ri) {}
-	__device__ virtual bool scatter(const Ray& rIn, const Intersect& rec, Vector3& attenuation, Ray& scattered, curandState* localRandState) const
+	__device__ Dielectric(float ri) : refIdx(ri) {}
+	__device__ virtual bool scatter(const Ray &rIn, const Intersect &rec, Vector3 &attenuation, Ray &scattered, curandState* localRandState) const
 	{
 		Vector3 outwardNorm;
 		Vector3 reflected = reflect(rIn.direction(), rec.normal);

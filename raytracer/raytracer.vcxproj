@@ -80,13 +80,16 @@
     <CudaCompile Include="kernel.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Aabb.cuh" />
+    <ClInclude Include="BvhNode.cuh" />
     <ClInclude Include="Camera.cuh" />
     <ClInclude Include="HitableList.cuh" />
-    <ClInclude Include="Intersect.cuh" />
+    <ClInclude Include="Hitable.cuh" />
     <ClInclude Include="Light.cuh" />
     <ClInclude Include="Material.cuh" />
     <ClInclude Include="Ray.cuh" />
     <ClInclude Include="Sphere.cuh" />
+    <ClInclude Include="Texture.cuh" />
     <ClInclude Include="Triangle.cuh" />
     <ClInclude Include="Vector3.cuh" />
     <ClInclude Include="writeImage.h" />

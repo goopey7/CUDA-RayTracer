@@ -33,7 +33,7 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
 
 //We can't use recursion here because function calls are valuable. Normally we limit recursion anyway for this method,
 //so we can replace that functionality with iteration.
-__device__ Vector3 colour(const Ray& r,Hitable** world,curandState* localRandState)
+__device__ Vector3 colour(const Ray &r,Hitable** world,curandState* localRandState)
 {
 	Ray currentRay = r;
 	Vector3 currentAttenuation = Vector3(1.f,1.f,1.f);
@@ -64,7 +64,7 @@ __device__ Vector3 colour(const Ray& r,Hitable** world,curandState* localRandSta
 
 __global__ void randInit(curandState* randState)
 {
-	if (threadIdx.x == 0 && blockIdx.x == 0) 
+	if (threadIdx.x == 0&&blockIdx.x == 0) 
 		curand_init(419, 0, 0, randState);
 }
 
@@ -109,8 +109,10 @@ __global__ void render(Vector3* fb,int maxX,int maxY,
 __device__ inline void scene1(Hitable** dList, Hitable** dWorld, Camera** dCamera, int width, int height, curandState* randState)
 {
 	curandState localRandState = *randState;
+	Texture* checker = new CheckerTexture(new ConstantTexture(Vector3(.2f, .3f, .1f)),
+		new ConstantTexture(Vector3(.9f, .9f, .9f)));
 	dList[0] = new Sphere(Vector3(0, -1000.0, -1), 1000,
-		new lambert(Vector3(0.5, 0.5, 0.5)));
+		new Lambert(checker));
 	int i = 1;
 	for (int a = -11; a < 11; a++)
 	{
@@ -120,21 +122,21 @@ __device__ inline void scene1(Hitable** dList, Hitable** dWorld, Camera** dCamer
 			Vector3 centre(a + RND, .2f, b + RND);
 			if (chooseMat < .8f)
 			{
-				dList[i++] = new MovingSphere(centre,centre+Vector3(0,.5f*RND,0),0.f,1.f,.2f, new lambert(Vector3(RND * RND, RND * RND, RND * RND)));
+				dList[i++] = new MovingSphere(centre,centre+Vector3(0,.5f*RND,0),0.f,1.f,.2f, new Lambert(new ConstantTexture(Vector3(RND * RND, RND * RND, RND * RND))));
 			}
 			else if (chooseMat < .95f)
 			{
-				dList[i++] = new Sphere(centre, .2f, new metal(Vector3(.5f * (1.f + RND), .5f * (1.f + RND), .5f * (1.f + RND)), 0.5f * RND));
+				dList[i++] = new Sphere(centre, .2f, new Metal(new ConstantTexture(Vector3(.5f * (1.f + RND), .5f * (1.f + RND), .5f * (1.f + RND))), 0.5f * RND));
 			}
 			else
 			{
-				dList[i++] = new Sphere(centre, .2f, new dielectric(1.5f));
+				dList[i++] = new Sphere(centre, .2f, new Dielectric(1.5f));
 			}
 		}
 	}
-	dList[i++] = new Sphere(Vector3(0, 1, 0), 1.0, new dielectric(.2f));
-	dList[i++] = new MovingSphere(Vector3(0,1,0), Vector3(1,1,0),0.f,1.f,1.f,new lambert(Vector3(1.f,0.f,0.f)));
-	dList[i++] = new Sphere(Vector3(4, 1, 0), 1.0, new metal(Vector3(0.7, 0.6, 0.5), .1));
+	dList[i++] = new Sphere(Vector3(0, 1, 0), 1.0, new Dielectric(.2f));
+	dList[i++] = new MovingSphere(Vector3(0,1,0), Vector3(1,1,0),0.f,1.f,1.f,new Lambert(new ConstantTexture(Vector3(1.f,0.f,0.f))));
+	dList[i++] = new Sphere(Vector3(4, 1, 0), 1.0, new Metal(new ConstantTexture(Vector3(0.7, 0.6, 0.5)), .1));
 	*randState = localRandState;
 	*dWorld = new HitableList(dList, 22 * 22 + 1 + 3);
 	Vector3 lookfrom(13, 2, 3);
@@ -154,9 +156,9 @@ __device__ inline void scene1(Hitable** dList, Hitable** dWorld, Camera** dCamer
 __device__ inline void scene2(Hitable** dList, Hitable** dWorld, Camera** dCamera, int width, int height, curandState* randState)
 {
 	curandState localRandState = *randState;
-	dList[0] = new Sphere(Vector3(0, -1000.0, -1), 1000, new lambert(Vector3(87.f / 255.f, 186.f / 255.f, 115.f / 255.f))); //floor
-	dList[1] = new MovingSphere(Vector3(0, 1, 0), Vector3(1,1,0),0.f,1.f,1.f, new lambert(Vector3(0.7, 0.6, 0.5)));
-	//dList[1] = new Triangle(Vector3(3, 0, 0), Vector3(-3, 0, 0), Vector3(0, 2, 0), new metal(Vector3(87.f / 255.f, 186.f / 255.f, 115.f / 255.f),.1f));
+	dList[0] = new Sphere(Vector3(0, -1000.0, -1), 1000, new Lambert(new ConstantTexture(Vector3(87.f / 255.f, 186.f / 255.f, 115.f / 255.f)))); //floor
+	dList[1] = new MovingSphere(Vector3(0, 1, 0), Vector3(1,1,0),0.f,1.f,1.f, new Lambert(new ConstantTexture(Vector3(0.7, 0.6, 0.5))));
+	//dList[1] = new Triangle(Vector3(3, 0, 0), Vector3(-3, 0, 0), Vector3(0, 2, 0), new Metal(Vector3(87.f / 255.f, 186.f / 255.f, 115.f / 255.f),.1f));
 	*randState = localRandState;
 	*dWorld = new HitableList(dList, 2);
 	Vector3 lookfrom(7, 3, 7);
@@ -176,7 +178,7 @@ __device__ inline void scene2(Hitable** dList, Hitable** dWorld, Camera** dCamer
 //Select active scene here
 __global__ void createWorld(Hitable** dList, Hitable** dWorld,Camera** dCamera,int width,int height,curandState* randState)
 {
-	if (threadIdx.x == 0 && blockIdx.x == 0)
+	if (threadIdx.x == 0&&blockIdx.x == 0)
 	{
 		scene1(dList, dWorld, dCamera, width, height, randState);
 		//scene2(dList, dWorld, dCamera, width, height, randState);

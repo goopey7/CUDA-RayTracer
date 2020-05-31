@@ -15,7 +15,7 @@ public:
 	Vector3 A, B;
 	float _time;
 	__device__ Ray() {}
-	__device__ Ray(const Vector3& a, const Vector3& b,float ti=0.f)
+	__device__ Ray(const Vector3 &a, const Vector3 &b,float ti=0.f)
 	{
 		A = a;
 		B = b;
