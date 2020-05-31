@@ -64,9 +64,8 @@ __device__ Vector3 colour(const Ray& r,Hitable** world,curandState* localRandSta
 
 __global__ void randInit(curandState* randState)
 {
-	if (threadIdx.x == 0 && blockIdx.x == 0) {
+	if (threadIdx.x == 0 && blockIdx.x == 0) 
 		curand_init(419, 0, 0, randState);
-	}
 }
 
 __global__ void renderInit(int maxX, int maxY, curandState* randState)

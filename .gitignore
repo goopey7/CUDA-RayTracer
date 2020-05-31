@@ -4,3 +4,8 @@
 *.ptx
 *.cubin
 *.fatbin
+*.png
+*.jpg
+/.vs
+/x64
+/raytracer/x64
