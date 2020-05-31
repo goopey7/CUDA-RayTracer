@@ -1,3 +1,6 @@
+/*
+	Triangle - Sam Collier
+*/
 #ifndef  TRIANGLEH
 #define TRIANGLEH
 

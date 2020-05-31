@@ -1,4 +1,6 @@
-
+/*
+	main - Sam Collier
+*/
 #include <iostream>
 #include <time.h>
 #include <float.h>

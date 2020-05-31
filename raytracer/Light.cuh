@@ -1,3 +1,6 @@
+/*
+	Light - Sam Collier
+*/
 #ifndef LIGHTH
 #define LIGHTH
 

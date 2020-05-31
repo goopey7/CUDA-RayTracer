@@ -1,3 +1,6 @@
+/*
+	Camera - Sam Collier
+*/
 #ifndef CameraH
 #define CameraH
 #define _USE_MATH_DEFINES

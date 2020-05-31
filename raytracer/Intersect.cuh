@@ -1,3 +1,6 @@
+/*
+	Intersect - Sam Collier
+*/
 #ifndef HITABLEH
 #define HITABLEH
 

@@ -1,3 +1,6 @@
+/*
+	HitableList - Sam Collier
+*/
 #ifndef HITABLELISTH
 #define HITABLELISTH
 

@@ -1,3 +1,6 @@
+/*
+	Material - Sam Collier
+*/
 #ifndef MaterialH
 #define MaterialH
 
