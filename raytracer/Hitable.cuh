@@ -9,7 +9,7 @@ class Material;
 
 struct Intersect
 {
-	float t;
+	float t, u, v;
 	Vector3 p;
 	Vector3 normal;
 	Material* matPtr;

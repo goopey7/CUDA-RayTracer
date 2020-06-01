@@ -4,9 +4,9 @@
 #ifndef SPHEREH
 #define SPHEREH
 
-#include "Hitable.cuh"
+#include "Surface.cuh"
 
-class Sphere : public Hitable
+class Sphere : public Surface
 {
 public:
 	__device__ Sphere() {}
@@ -17,6 +17,15 @@ public:
 	float radius;
 	Material* matPtr;
 };
+
+__device__ void getSphereUV(const Vector3& p, float& u, float& v)
+{
+	float phi = atan2(p.z(), p.x());
+	float theta = asin(p.z());
+	float pi = acos(-1.f);
+	u = 1 - (phi + pi) / (2 * pi);
+	v = (theta + pi / 2) / pi;
+}
 
 __device__ bool Sphere::hit(const Ray &r, float tMin, float tMax, Intersect &rec) const
 {
@@ -34,6 +43,7 @@ __device__ bool Sphere::hit(const Ray &r, float tMin, float tMax, Intersect &rec
 			rec.p = r.pointAtParameter(rec.t);
 			rec.normal = (rec.p - centre) / radius;
 			rec.matPtr = matPtr;
+			getSphereUV((rec.p - centre) / radius, rec.u, rec.v);
 			return true;
 		}
 		temp = (-b + sqrt(discrim)) / (2*a);
@@ -43,6 +53,7 @@ __device__ bool Sphere::hit(const Ray &r, float tMin, float tMax, Intersect &rec
 			rec.p = r.pointAtParameter(rec.t);
 			rec.normal = (rec.p - centre) / radius;
 			rec.matPtr = matPtr;
+			getSphereUV((rec.p - centre) / radius, rec.u, rec.v);
 			return true;
 		}
 	}

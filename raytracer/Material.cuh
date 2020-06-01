@@ -45,6 +45,7 @@ class Material
 {
 public:
 	__device__ virtual bool scatter(const Ray &rIn, const Intersect &rec, Vector3 &attenuation, Ray &scattered, curandState* localRandState)const = 0;
+	__device__ virtual Vector3 emitted(float u, float v, const Vector3& p) const { return Vector3(0, 0, 0); }
 };
 
 class Lambert : public Material
@@ -114,6 +115,20 @@ public:
 			scattered = Ray(rec.p, reflected,rIn.time());
 		else scattered = Ray(rec.p, refracted,rIn.time());
 		return true;
+	}
+};
+class DiffuseLight : public Material
+{
+public:
+	Texture* emit;
+	__device__ DiffuseLight(Texture* a) : emit(a) {}
+	__device__ virtual bool scatter(const Ray& rIn, const Intersect& rec, Vector3& attenuation, Ray& scattered, curandState* localRandState) const
+	{
+		return false;
+	}
+	__device__ virtual Vector3 emitted(float u, float v, const Vector3& p) const
+	{
+		return emit->value(u, v, p);
 	}
 };
 

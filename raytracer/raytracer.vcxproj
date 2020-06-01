@@ -85,14 +85,19 @@
     <ClInclude Include="Camera.cuh" />
     <ClInclude Include="HitableList.cuh" />
     <ClInclude Include="Hitable.cuh" />
-    <ClInclude Include="Light.cuh" />
     <ClInclude Include="Material.cuh" />
     <ClInclude Include="Ray.cuh" />
+    <ClInclude Include="Rectangle.cuh" />
     <ClInclude Include="Sphere.cuh" />
+    <ClInclude Include="stbImage.h" />
+    <ClInclude Include="Surface.cuh" />
     <ClInclude Include="Texture.cuh" />
     <ClInclude Include="Triangle.cuh" />
     <ClInclude Include="Vector3.cuh" />
     <ClInclude Include="writeImage.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\..\..\Desktop\earthmap.jpg" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

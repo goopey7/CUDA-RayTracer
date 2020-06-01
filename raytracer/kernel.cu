@@ -7,6 +7,8 @@
 #define STBI_MSC_SECURE_CRT
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "writeImage.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stbImage.h"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "Vector3.cuh"
@@ -17,6 +19,7 @@
 #include "Camera.cuh"
 #include "Material.cuh"
 #include "Light.cuh"
+#include "Rectangle.cuh"
 
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
 void check_cuda(cudaError_t result, char const *const func, const char *const file, int const line)
@@ -31,35 +34,42 @@ void check_cuda(cudaError_t result, char const *const func, const char *const fi
     }
 }
 
-//We can't use recursion here because function calls are valuable. Normally we limit recursion anyway for this method,
-//so we can replace that functionality with iteration.
-__device__ Vector3 colour(const Ray &r,Hitable** world,curandState* localRandState)
+__device__ Vector3 colour(const Ray &r,Hitable** world,int depth,curandState* localRandState)
 {
 	Ray currentRay = r;
 	Vector3 currentAttenuation = Vector3(1.f,1.f,1.f);
-	for (int i = 0; i < 50; i++)
+	Intersect rec;
+	if ((*world)->hit(currentRay, .001f, FLT_MAX, rec))
 	{
-		Intersect rec;
-		if ((*world)->hit(currentRay, .001f, FLT_MAX, rec))
+		Ray scattered;
+		Vector3 attenuation;
+		Vector3 emitted = rec.matPtr->emitted(rec.u, rec.v, rec.p);
+		if (depth<15&&rec.matPtr->scatter(currentRay, rec, attenuation, scattered, localRandState))
 		{
-			Ray scattered;
-			Vector3 attenuation;
-			if (rec.matPtr->scatter(currentRay, rec, attenuation, scattered, localRandState))
-			{
-				currentAttenuation *= attenuation;
-				currentRay = scattered;
-			}
-			else return Vector3(0.f, 0.f, 0.f);
+			return emitted + attenuation * colour(scattered, world, depth + 1, localRandState);
 		}
-		else
-		{
-			Vector3 unitDir = unitVector(currentRay.direction());
-			float t = .5f * (unitDir.y() + 1.f);
-			Vector3 c = (1.f - t) * Vector3(1.f, 1.f, 1.f) + t * Vector3(.5f, .7f, 1.f);
-			return currentAttenuation * c;
-		}
+		else return emitted;
 	}
-	return Vector3(0.f, 0.f, 0.f); //we have exceeded bounce limit (which is currently 50)
+	else
+	{
+		return Vector3(0, 0, 0);
+	}
+}
+
+__device__ Vector3 colourUnlit(const Ray& r, Hitable** world, int depth, curandState* localRandState)
+{
+	Intersect rec;
+	if ((*world)->hit(r, .001f, FLT_MAX, rec))
+	{
+		Ray scattered;
+		Vector3 attenuation;
+		if (depth < 15 && rec.matPtr->scatter(r, rec, attenuation, scattered, localRandState))
+		{
+			return attenuation * colourUnlit(scattered, world, depth + 1, localRandState);
+		}
+		else return Vector3(0, 0, 0);
+	}
+	else return Vector3(1.f, 1.f, 1.f);
 }
 
 __global__ void randInit(curandState* randState)
@@ -93,7 +103,7 @@ __global__ void render(Vector3* fb,int maxX,int maxY,
 		float u = float(i+curand_uniform(&localRandState)) / float(maxX);
 		float v = float(j+curand_uniform(&localRandState)) / float(maxY);
 		Ray r = (*cam)->generateRay(u, v, &localRandState);
-		outCol += colour(r, world, &localRandState);
+		outCol += colour(r, world,0, &localRandState);
 	}
 	randState[pixelIndex] = localRandState;
 	outCol /= float(numSamples);
@@ -153,14 +163,18 @@ __device__ inline void scene1(Hitable** dList, Hitable** dWorld, Camera** dCamer
 		0.f,1.f);
 }
 
-__device__ inline void scene2(Hitable** dList, Hitable** dWorld, Camera** dCamera, int width, int height, curandState* randState)
+__device__ inline void scene2(Hitable** dList, Hitable** dWorld, Camera** dCamera, int width, int height, curandState* randState,int nx,int ny,unsigned char* texData)
 {
 	curandState localRandState = *randState;
-	dList[0] = new Sphere(Vector3(0, -1000.0, -1), 1000, new Lambert(new ConstantTexture(Vector3(87.f / 255.f, 186.f / 255.f, 115.f / 255.f)))); //floor
-	dList[1] = new MovingSphere(Vector3(0, 1, 0), Vector3(1,1,0),0.f,1.f,1.f, new Lambert(new ConstantTexture(Vector3(0.7, 0.6, 0.5))));
-	//dList[1] = new Triangle(Vector3(3, 0, 0), Vector3(-3, 0, 0), Vector3(0, 2, 0), new Metal(Vector3(87.f / 255.f, 186.f / 255.f, 115.f / 255.f),.1f));
+	Texture* checker = new CheckerTexture(new ConstantTexture(Vector3(.2f, .3f, .1f)),
+		new ConstantTexture(Vector3(.9f, .9f, .9f)));
+	Texture* earth = new ImageTexture(texData, nx, ny);
+	dList[0] = new Sphere(Vector3(0, -1000.0, -1), 1000, new Lambert(checker)); //floor
+	//dList[1] = new Sphere(Vector3(0, 1, 0), 1, new Lambert(checker));
+	dList[1] = new Sphere(Vector3(0, 1, 0), 1, new Lambert(new ConstantTexture(Vector3(0.9,0.9,0.9))));
+	dList[2] = new XYRect(1, 2, 1, 2, -2, new DiffuseLight(new ConstantTexture(Vector3(4, 4, 4))));
 	*randState = localRandState;
-	*dWorld = new HitableList(dList, 2);
+	*dWorld = new HitableList(dList, 3);
 	Vector3 lookfrom(7, 3, 7);
 	Vector3 lookat(0, 0, 0);
 	float dist_to_focus = 10.0; (lookfrom - lookat).length();
@@ -176,20 +190,20 @@ __device__ inline void scene2(Hitable** dList, Hitable** dWorld, Camera** dCamer
 }
 
 //Select active scene here
-__global__ void createWorld(Hitable** dList, Hitable** dWorld,Camera** dCamera,int width,int height,curandState* randState)
+__global__ void createWorld(Hitable** dList, Hitable** dWorld,Camera** dCamera,int width,int height,curandState* randState,int nx,int ny,unsigned char* texData)
 {
 	if (threadIdx.x == 0&&blockIdx.x == 0)
 	{
-		scene1(dList, dWorld, dCamera, width, height, randState);
-		//scene2(dList, dWorld, dCamera, width, height, randState);
+		//scene1(dList, dWorld, dCamera, width, height, randState);
+		scene2(dList, dWorld, dCamera, width, height, randState,nx,ny,texData);
 	}
 }
 
 __global__ void freeWorld(Hitable** dList, Hitable** dWorld,Camera** dCamera,int numObjects)
 {
-	for (int i = 0; i < 488; i++)
+	for (int i = 0; i < numObjects; i++)
 	{
-		delete ((Sphere*)dList[i])->matPtr;
+		delete ((Surface*)dList[i])->matPtr;
 		delete dList[i];
 	}
 	delete *dWorld;
@@ -209,6 +223,12 @@ int main()
 	int res=width*height;
 	size_t fbSize=res*sizeof(Vector3);
 
+	//Allocate Textures
+	int nx, ny, nn;
+	unsigned char* texData = stbi_load("earthmap.jpg", &nx, &ny, &nn, 0);
+	size_t texSize = nx * ny * nn * sizeof(unsigned char);
+	checkCudaErrors(cudaMallocManaged((void**)&texData, texSize));
+
 	//Allocate frame buffer
 	Vector3* fb;
 	checkCudaErrors(cudaMallocManaged((void**)&fb,fbSize));
@@ -226,13 +246,14 @@ int main()
 
 	// Create our world and Camera
 	Hitable** dList;
-	int numObjects = 488;
+	// 488 objects in scene1
+	int numObjects = 3;
 	checkCudaErrors(cudaMalloc((void**)&dList, numObjects * sizeof(Hitable*)));
 	Hitable** dWorld;
 	checkCudaErrors(cudaMalloc((void**)&dWorld, sizeof(Hitable*)));
 	Camera** dCamera;
 	checkCudaErrors(cudaMalloc((void**)&dCamera, sizeof(Camera*)));
-	createWorld<<<1,1>>>(dList, dWorld, dCamera,width,height,dRandState2);
+	createWorld<<<1,1>>>(dList, dWorld, dCamera,width,height,dRandState2,nx,ny,texData);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
@@ -288,5 +309,7 @@ int main()
 	checkCudaErrors(cudaFree(dList));
 	checkCudaErrors(cudaFree(dWorld));
 	checkCudaErrors(cudaFree(fb));
+	checkCudaErrors(cudaFree(dRandState2));
+	checkCudaErrors(cudaFree(texData));
 	return 0;
 }
