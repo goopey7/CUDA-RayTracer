@@ -57,7 +57,7 @@ public:
 	{
 		Vector3 target = rec.p + rec.normal + randomInUnitSphere(localRandState);
 		scattered = Ray(rec.p, target - rec.p,rIn.time());
-		attenuation = albedo->value(0,0,rec.p);
+		attenuation = albedo->value(rec.u,rec.v,rec.p);
 		return true;
 	}
 };

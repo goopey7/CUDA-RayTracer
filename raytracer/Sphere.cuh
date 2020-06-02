@@ -6,6 +6,8 @@
 
 #include "Hitable.cuh"
 #include "Surface.cuh"
+#define _USE_MATH_DEFINES
+#include "math.h"
 
 class Sphere : public Surface
 {
@@ -14,6 +16,7 @@ public:
 	__device__ Sphere(Vector3 cen, float r, Material* m) : centre(cen), radius(r), matPtr(m) {};
 	__device__ virtual bool hit(const Ray &r, float tmin, float tmax, Intersect &rec) const;
 	__device__ virtual bool boundingBox(float t0,float t1,Aabb &box) const;
+	__device__ void getSphereUV(const Vector3& p, float& u, float& v)const;
 	Vector3 centre;
 	float radius;
 	Material* matPtr;
@@ -35,6 +38,7 @@ __device__ bool Sphere::hit(const Ray &r, float tMin, float tMax, Intersect &rec
 			rec.p = r.pointAtParameter(rec.t);
 			rec.normal = (rec.p - centre) / radius;
 			rec.matPtr = matPtr;
+			getSphereUV((rec.p - centre) / radius, rec.u, rec.v);
 			return true;
 		}
 		temp = (-b + sqrt(discrim)) / (2*a);
@@ -44,6 +48,7 @@ __device__ bool Sphere::hit(const Ray &r, float tMin, float tMax, Intersect &rec
 			rec.p = r.pointAtParameter(rec.t);
 			rec.normal = (rec.p - centre) / radius;
 			rec.matPtr = matPtr;
+			getSphereUV((rec.p - centre) / radius, rec.u, rec.v);
 			return true;
 		}
 	}
@@ -55,6 +60,15 @@ __device__ bool Sphere::boundingBox(float t0, float t1, Aabb &box) const
 	box = Aabb(centre - Vector3(radius, radius, radius), centre + Vector3(radius, radius, radius));
 	return true;
 }
+
+__device__ inline void Sphere::getSphereUV(const Vector3& p, float& u, float& v) const
+{
+	float phi = atan2(p.z(), p.x());
+	float theta = asin(p.y());
+	u = 1 - (phi + M_PI) / (2 * M_PI);
+	v = (theta + M_PI / 2) / M_PI;
+}
+
 
 class MovingSphere : public Sphere
 {
