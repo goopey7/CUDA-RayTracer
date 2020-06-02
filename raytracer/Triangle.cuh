@@ -5,9 +5,10 @@
 #define TRIANGLEH
 
 #include "Hitable.cuh"
+#include "Surface.cuh"
 #include "Vector3.cuh"
 
-class Triangle : public Hitable
+class Triangle : public Surface
 {
 public:
 	__device__ Triangle() {}

@@ -17,8 +17,8 @@ struct Intersect
 class Hitable
 {
 public:
-	__device__ virtual bool hit(const Ray &r, float tMin, float tMax, Intersect &rec)const = 0;
-	__device__ virtual bool boundingBox(float t0, float t1, Aabb &box)const = 0;
+	__device__ virtual bool hit(const Ray& r, float tMin, float tMax, Intersect& rec)const = 0;
+	__device__ virtual bool boundingBox(float t0, float t1, Aabb& box)const = 0;
 };
 class FlipNormals : public Hitable
 {
