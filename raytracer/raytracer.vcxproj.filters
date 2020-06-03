@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CudaCompile Include="main.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Aabb.cuh" />
+    <ClInclude Include="BvhNode.cuh" />
+    <ClInclude Include="Camera.cuh" />
+    <ClInclude Include="HitableList.cuh" />
+    <ClInclude Include="Hitable.cuh" />
+    <ClInclude Include="Material.cuh" />
+    <ClInclude Include="Ray.cuh" />
+    <ClInclude Include="Rectangle.cuh" />
+    <ClInclude Include="Sphere.cuh" />
+    <ClInclude Include="Surface.cuh" />
+    <ClInclude Include="Texture.cuh" />
+    <ClInclude Include="Triangle.cuh" />
+    <ClInclude Include="Vector3.cuh" />
+    <ClInclude Include="writeImage.h">
+      <Filter>Dependencies</Filter>
+    </ClInclude>
+    <ClInclude Include="stbImage.h">
+      <Filter>Dependencies</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\..\..\Desktop\earthmap.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Dependencies">
+      <UniqueIdentifier>{8b8a3dff-1ec6-4458-9a59-40f404e61b10}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
