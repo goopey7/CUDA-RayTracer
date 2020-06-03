@@ -17,19 +17,10 @@
     <ClInclude Include="Texture.cuh" />
     <ClInclude Include="Triangle.cuh" />
     <ClInclude Include="Vector3.cuh" />
-    <ClInclude Include="writeImage.h">
-      <Filter>Dependencies</Filter>
-    </ClInclude>
-    <ClInclude Include="stbImage.h">
-      <Filter>Dependencies</Filter>
-    </ClInclude>
+    <ClInclude Include="stbImage.h" />
+    <ClInclude Include="writeImage.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\..\..\..\Desktop\earthmap.jpg" />
-  </ItemGroup>
-  <ItemGroup>
-    <Filter Include="Dependencies">
-      <UniqueIdentifier>{8b8a3dff-1ec6-4458-9a59-40f404e61b10}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
 </Project>
