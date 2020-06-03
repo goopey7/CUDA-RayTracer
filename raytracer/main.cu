@@ -18,8 +18,10 @@
 #include "Material.cuh"
 #include "Surface.cuh"
 #include "Rectangle.cuh"
+#include "Box.cuh"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stbImage.h"
+#include "Transform.cuh"
 
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
 void check_cuda(cudaError_t result, char const *const func, const char *const file, int const line)
@@ -40,7 +42,7 @@ __device__ Vector3 colour(const Ray& r, Hitable** world,int depth, curandState* 
 	Ray currentRay = r;
 	Vector3 currentAttenuation = Vector3(1.f, 1.f, 1.f);
 	Vector3 currentEmitted = Vector3(0.f, 0.f, 0.f);
-	for (int i = 0; i < depth; i++)
+	for (int i = 0; i < 50; i++)
 	{
 		Intersect rec;
 		if ((*world)->hit(currentRay, .001f, FLT_MAX, rec))
@@ -126,7 +128,7 @@ __global__ void render(Vector3* fb,int maxX,int maxY,
 		float u = float(i+curand_uniform(&localRandState)) / float(maxX);
 		float v = float(j+curand_uniform(&localRandState)) / float(maxY);
 		Ray r = (*cam)->generateRay(u, v, &localRandState);
-		outCol += colour(r, world,50, &localRandState);
+		outCol += colour(r, world,100, &localRandState);
 	}
 	randState[pixelIndex] = localRandState;
 	outCol /= float(numSamples);
@@ -214,19 +216,23 @@ __device__ inline void scene2(Hitable** dList, Hitable** dWorld, Camera** dCamer
 //Scene 3: Cornell Box
 __device__ inline void scene3(Hitable** dList,Hitable** dWorld, Camera** dCamera,int width,int height,ImageTexture** texture,curandState* randState)
 {
-	*dWorld = new HitableList(dList, 7);
 	int i = 0;
 	Material* red = new Lambert(new ConstantTexture(Vector3(.65, .05, .05)));
 	Material* white = new Lambert(new ConstantTexture(Vector3(.73, .73, .73)));
 	Material* green = new Lambert(new ConstantTexture(Vector3(.12, .45, .15)));
-	Material* light = new DiffuseLight(new ConstantTexture(Vector3(15, 15, 15)));
+	Material* light = new DiffuseLight(new ConstantTexture(Vector3(1, 1, 1)));
+	Material* earth = new Lambert(*texture);
 	dList[i++] = new YZRect(0, 555, 0, 555, 555, green);
 	dList[i++] = new YZRect(0, 555, 0, 555, 0, red);
-	dList[i++] = new XZRect(213, 343, 227, 332, 554.99, light);
+	dList[i++] = new XZRect(113, 443, 127, 432, 554, light);
 	dList[i++] = new XZRect(0, 555, 0, 555, 555, white);
 	dList[i++] = new XZRect(0, 555, 0, 555, 0, white);
 	dList[i++] = new FlipNormals(new XYRect(0, 555, 0, 555, 555, white));
-	//dList[i++] = new Sphere(Vector3(250, 250, 200), 200.f, red);
+	Box* b1 = new Box(Vector3(0, 0, 0), Vector3(165, 165, 165), white);
+	dList[i++] = new Translate(new RotateY(b1, -18), Vector3(130, 0, 65));
+	Box* b2 = new Box(Vector3(0, 0, 0), Vector3(165, 330, 165),white);
+	dList[i++] = new Translate(new RotateY(b2, 15), Vector3(265, 0, 295));
+	*dWorld = new HitableList(dList, i);
 	Vector3 lookfrom(278, 278, -800);
 	Vector3 lookat(278, 278, 0);
 	float distToFoucs = 10.0;
@@ -241,9 +247,9 @@ __global__ void createWorld(Hitable** dList, Hitable** dWorld,Camera** dCamera,i
 {
 	if (threadIdx.x == 0&&blockIdx.x == 0)
 	{
-		//scene1(dList, dWorld, dCamera, width, height, randState);
-		scene2(dList, dWorld, dCamera, width, height, texture, randState);
-		//scene3(dList, dWorld, dCamera, width, height, randState);
+		//scene1(dList, dWorld, dCamera, width, height, texture, randState);
+		//scene2(dList, dWorld, dCamera, width, height, texture, randState);
+		scene3(dList, dWorld, dCamera, width, height, texture, randState);
 	}
 }
 
@@ -261,11 +267,11 @@ __global__ void freeWorld(Hitable** dList, Hitable** dWorld,Camera** dCamera,int
 int main()
 {
 	// 8k is 7680x4320
-	const int width = 1920;
-	const int height = 1080;
+	const int width = 800;
+	const int height = 600;
 	const int numSamples = 100;
-	int tx=8;
-	int ty=8;
+	int tx=16;
+	int ty=16;
 	std::cerr<<"Rendering a "<<width<<"x"<<height<<" image";
 	std::cerr<<"\nUsing "<<tx<<"x"<<ty<<" blocks";
 	int res=width*height;
@@ -300,7 +306,7 @@ int main()
 
 	// Create our world and Camera
 	Hitable** dList;
-	int numObjects = 7;
+	int numObjects = 8;
 	checkCudaErrors(cudaMalloc((void**)&dList, numObjects * sizeof(Hitable*)));
 	Hitable** dWorld;
 	checkCudaErrors(cudaMalloc((void**)&dWorld, sizeof(Hitable*)));
@@ -351,29 +357,7 @@ int main()
 			pixels[index++]=ib;
 		}
 	}
-	stbi_write_png("laptopcheck.png",width,height,3,pixels,width*3);
-
-	//Output earth.jpg as a png
-	pixels = new uint8_t[texX * texY * 3];
-	index = 0;
-	for (int j = 0; j < texY; j++)
-	{
-		for (int i = 0; i < texX; i++)
-		{
-			float r = int(texDataHost[3 * i + 3 * texX * j]) / 255.f;
-			float g = int(texDataHost[3 * i + 3 * texX * j + 1]) / 255.f;
-			float b = int(texDataHost[3 * i + 3 * texX * j + 2]) / 255.f;
-
-			int ir = int(255.99 * r);
-			int ig = int(255.99 * g);
-			int ib = int(255.99 * b);
-
-			pixels[index++] = ir;
-			pixels[index++] = ig;
-			pixels[index++] = ib;
-		}
-	}
-	stbi_write_png("earth.png", texX, texY, 3, pixels, texX * 3);
+	stbi_write_png("scene3.png",width,height,3,pixels,width*3);
 	
 	//clean up
 	freeWorld<<<1,1>>>(dList,dWorld,dCamera,numObjects);

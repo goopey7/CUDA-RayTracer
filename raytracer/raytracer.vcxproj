@@ -83,6 +83,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Aabb.cuh" />
+    <ClInclude Include="Box.cuh" />
     <ClInclude Include="BvhNode.cuh" />
     <ClInclude Include="Camera.cuh" />
     <ClInclude Include="HitableList.cuh" />
@@ -94,6 +95,7 @@
     <ClInclude Include="stbImage.h" />
     <ClInclude Include="Surface.cuh" />
     <ClInclude Include="Texture.cuh" />
+    <ClInclude Include="Transform.cuh" />
     <ClInclude Include="Triangle.cuh" />
     <ClInclude Include="Vector3.cuh" />
     <ClInclude Include="writeImage.h" />

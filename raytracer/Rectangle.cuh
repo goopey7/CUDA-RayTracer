@@ -30,7 +30,7 @@ __device__ bool XYRect::hit(const Ray& r, float t0, float t1, Intersect& rec) co
 	rec.t = t;
 	rec.matPtr = matPtr;
 	rec.p = r.pointAtParameter(t);
-	rec.normal = Vector3(0.f, 0.f, 1.f);
+	rec.setFaceNormal(r,Vector3(0.f, 0.f, 1.f));
 	return true;
 }
 
@@ -61,7 +61,7 @@ __device__ bool XZRect::hit(const Ray& r, float t0, float t1, Intersect& rec) co
 	rec.t = t;
 	rec.matPtr = matPtr;
 	rec.p = r.pointAtParameter(t);
-	rec.normal = Vector3(0.f, 0.f, 1.f);
+	rec.setFaceNormal(r,Vector3(0.f, 1.f, 0.f));
 	return true;
 }
 
@@ -92,7 +92,7 @@ __device__ bool YZRect::hit(const Ray& r, float t0, float t1, Intersect& rec) co
 	rec.t = t;
 	rec.matPtr = matPtr;
 	rec.p = r.pointAtParameter(t);
-	rec.normal = Vector3(0.f, 0.f, 1.f);
+	rec.setFaceNormal(r, Vector3(1.f, 0.f, 0.f));
 	return true;
 }
 

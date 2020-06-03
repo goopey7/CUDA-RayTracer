@@ -13,6 +13,12 @@ struct Intersect
 	Vector3 p;
 	Vector3 normal;
 	Material* matPtr;
+	bool bFrontFace;
+	__device__ inline void setFaceNormal(const Ray& r,const Vector3& outwardNormal)
+	{
+		bFrontFace = dot(r.direction(), outwardNormal) < 0;
+		normal = bFrontFace ? outwardNormal : -outwardNormal;
+	}
 };
 class Hitable
 {
@@ -29,10 +35,10 @@ public:
 	{
 		if (ptr->hit(r, tMin, tMax, rec))
 		{
-			rec.normal *= -1;
+			rec.bFrontFace = !rec.bFrontFace;
 			return true;
 		}
-		else return false;
+		return false;
 	}
 	__device__ virtual bool boundingBox(float t0, float t1, Aabb& box) const
 	{
