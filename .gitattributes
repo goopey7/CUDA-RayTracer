@@ -1,2 +1,2 @@
-raytracer/stb_image_write.h linguist-vendored=true
-raytracer/stb_image.h linguist-vendored=true
+raytracer/stbImage.h linguist-vendored=true
+raytracer/writeImage.h linguist-vendored=true
