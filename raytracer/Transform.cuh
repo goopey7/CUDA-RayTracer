@@ -3,17 +3,18 @@
 
 #include "Hitable.cuh"
 
-class Translate : public Hitable
+class Translate : public Surface
 {
 public:
 	Vector3 offset;
-	Hitable* hitablePtr;
-	__device__ Translate(Hitable* p,const Vector3& displacement):hitablePtr(p),offset(displacement){}
-	__device__ virtual bool hit(const Ray& r, float tMin, float tMax, Intersect& rec)const;
-	__device__ virtual bool boundingBox(float t0, float t1, Aabb& box)const;
+	Surface* hitablePtr;
+	Material* matPtr;
+	__device__ Translate(Surface* p,const Vector3 &displacement):hitablePtr(p),offset(displacement),matPtr(p->matPtr){}
+	__device__ virtual bool hit(const Ray &r, float tMin, float tMax, Intersect &rec)const;
+	__device__ virtual bool boundingBox(float t0, float t1, Aabb &box)const;
 };
 
-__device__ inline bool Translate::hit(const Ray& r, float tMin, float tMax, Intersect& rec) const
+__device__ inline bool Translate::hit(const Ray &r, float tMin, float tMax, Intersect &rec) const
 {
 	Ray movedR(r.origin() - offset, r.direction(), r.time());
 	if (hitablePtr->hit(movedR, tMin, tMax, rec))
@@ -24,7 +25,7 @@ __device__ inline bool Translate::hit(const Ray& r, float tMin, float tMax, Inte
 	return false;
 }
 
-__device__ inline bool Translate::boundingBox(float t0, float t1, Aabb& box) const
+__device__ inline bool Translate::boundingBox(float t0, float t1, Aabb &box) const
 {
 	if(hitablePtr->boundingBox(t0,t1,box))
 	{
@@ -34,23 +35,24 @@ __device__ inline bool Translate::boundingBox(float t0, float t1, Aabb& box) con
 	return false;
 }
 
-class RotateY : public Hitable
+class RotateY : public Surface
 {
 public:
-	Hitable* hitablePtr;
+	Surface* hitablePtr;
 	float sinTheta, cosTheta;
 	bool bHasBox;
 	Aabb bbox;
-	__device__ RotateY(Hitable* p, float angle);
-	__device__ virtual bool hit(const Ray& r, float tMin, float tMax, Intersect& rec)const;
-	__device__ virtual bool boundingBox(float t0, float t1, Aabb& box)const
+	
+	__device__ RotateY(Surface* p, float angle);
+	__device__ virtual bool hit(const Ray &r, float tMin, float tMax, Intersect &rec)const;
+	__device__ virtual bool boundingBox(float t0, float t1, Aabb &box)const
 	{
 		box = bbox;
 		return bHasBox;
 	}
 };
 
-__device__ RotateY::RotateY(Hitable* p, float angle) : hitablePtr(p)
+__device__ RotateY::RotateY(Surface* p, float angle) : hitablePtr(p)
 {
 	float radians = (M_PI / 180.f) * angle;
 	sinTheta = sin(radians);
@@ -83,7 +85,7 @@ __device__ RotateY::RotateY(Hitable* p, float angle) : hitablePtr(p)
 	bbox = Aabb(min, max);
 }
 
-__device__ inline bool RotateY::hit(const Ray& r, float tMin, float tMax, Intersect& rec) const
+__device__ inline bool RotateY::hit(const Ray &r, float tMin, float tMax, Intersect &rec) const
 {
 	Vector3 origin = r.origin();
 	Vector3 direction = r.direction();

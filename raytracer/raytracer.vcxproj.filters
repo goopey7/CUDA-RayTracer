@@ -19,6 +19,8 @@
     <ClInclude Include="Vector3.cuh" />
     <ClInclude Include="stbImage.h" />
     <ClInclude Include="writeImage.h" />
+    <ClInclude Include="Box.cuh" />
+    <ClInclude Include="Transform.cuh" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\..\..\..\Desktop\earthmap.jpg" />

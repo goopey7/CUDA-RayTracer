@@ -10,15 +10,15 @@ public:
 	__device__ XYRect() {}
 	__device__ XYRect(float _x0, float _x1, float _y0, float _y1, float _k, Material* mat) :
 		x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_k), matPtr(mat) {};
-	__device__ virtual bool hit(const Ray& r, float t0, float t1, Intersect& rec)const;
-	__device__ virtual bool boundingBox(float t0, float t1, Aabb& box)const
+	__device__ virtual bool hit(const Ray &r, float t0, float t1, Intersect &rec)const;
+	__device__ virtual bool boundingBox(float t0, float t1, Aabb &box)const
 	{
 		box = Aabb(Vector3(x0, y0, k - .0001f), Vector3(x1, y1, k + .0001f));
 		return true;
 	}
 };
 
-__device__ bool XYRect::hit(const Ray& r, float t0, float t1, Intersect& rec) const
+__device__ bool XYRect::hit(const Ray &r, float t0, float t1, Intersect &rec) const
 {
 	float t = (k - r.origin().z()) / r.direction().z();
 	if (t<t0 || t>t1)return false;
@@ -42,14 +42,14 @@ public:
 	__device__ XZRect() {}
 	__device__ XZRect(float _x0, float _x1, float _z0, float _z1, float _k, Material* mat) :
 		x0(_x0), x1(_x1), z0(_z0), z1(_z1), k(_k), matPtr(mat) {};
-	__device__ virtual bool hit(const Ray& r, float t0, float t1, Intersect& rec)const;
-	__device__ virtual bool boundingBox(float t0, float t1, Aabb& box)const
+	__device__ virtual bool hit(const Ray &r, float t0, float t1, Intersect &rec)const;
+	__device__ virtual bool boundingBox(float t0, float t1, Aabb &box)const
 	{
 		box = Aabb(Vector3(x0, z0, k - .0001f), Vector3(x1, z1, k + .0001f));
 		return true;
 	}
 };
-__device__ bool XZRect::hit(const Ray& r, float t0, float t1, Intersect& rec) const
+__device__ bool XZRect::hit(const Ray &r, float t0, float t1, Intersect &rec) const
 {
 	float t = (k - r.origin().y()) / r.direction().y();
 	if (t<t0 || t>t1)return false;
@@ -73,14 +73,14 @@ public:
 	__device__ YZRect() {}
 	__device__ YZRect(float _y0, float _y1, float _z0, float _z1, float _k, Material* mat) :
 		y0(_y0), y1(_y1), z0(_z0), z1(_z1), k(_k), matPtr(mat) {};
-	__device__ virtual bool hit(const Ray& r, float t0, float t1, Intersect& rec)const;
-	__device__ virtual bool boundingBox(float t0, float t1, Aabb& box)const
+	__device__ virtual bool hit(const Ray &r, float t0, float t1, Intersect &rec)const;
+	__device__ virtual bool boundingBox(float t0, float t1, Aabb &box)const
 	{
 		box = Aabb(Vector3(y0, z0, k - .0001f), Vector3(y1, z1, k + .0001f));
 		return true;
 	}
 };
-__device__ bool YZRect::hit(const Ray& r, float t0, float t1, Intersect& rec) const
+__device__ bool YZRect::hit(const Ray &r, float t0, float t1, Intersect &rec) const
 {
 	float t = (k - r.origin().x()) / r.direction().x();
 	if (t<t0 || t>t1)return false;

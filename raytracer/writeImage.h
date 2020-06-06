@@ -245,7 +245,7 @@ STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
 #define STBIW_ASSERT(x) assert(x)
 #endif
 
-#define STBIW_UCHAR(x) (unsigned char) ((x) & 0xff)
+#define STBIW_UCHAR(x) (unsigned char) ((x)  &0xff)
 
 #ifdef STB_IMAGE_WRITE_STATIC
 static int stbi_write_png_compression_level = 8;
@@ -470,7 +470,7 @@ static int stbiw__outfile(stbi__write_context* s, int rgb_dir, int vdir, int x, 
 
 static int stbi_write_bmp_core(stbi__write_context* s, int x, int y, int comp, const void* data)
 {
-    int pad = (-x * 3) & 3;
+    int pad = (-x * 3)  &3;
     return stbiw__outfile(s, -1, -1, x, y, comp, 1, (void*)data, 0, pad,
         "11 4 22 4" "4 44 22 444444",
         'B', 'M', 14 + 40 + (x * 3 + pad) * y, 0, 0, 14 + 40,  // file header
@@ -650,8 +650,8 @@ static void stbiw__write_hdr_scanline(stbi__write_context* s, int width, int nco
     float linear[3];
     int x;
 
-    scanlineheader[2] = (width & 0xff00) >> 8;
-    scanlineheader[3] = (width & 0x00ff);
+    scanlineheader[2] = (width  &0xff00) >> 8;
+    scanlineheader[3] = (width  &0x00ff);
 
     /* skip RLE for images too small or large */
     if (width < 8 || width >= 32768) {
@@ -827,7 +827,7 @@ static int stbiw__zlib_bitrev(int code, int codebits)
 {
     int res = 0;
     while (codebits--) {
-        res = (res << 1) | (code & 1);
+        res = (res << 1) | (code  &1);
         code >>= 1;
     }
     return res;
@@ -898,7 +898,7 @@ STBIWDEF unsigned char* stbi_zlib_compress(unsigned char* data, int data_len, in
     i = 0;
     while (i < data_len - 3) {
         // hash next 3 bytes of data to be compressed
-        int h = stbiw__zhash(data + i) & (stbiw__ZHASH - 1), best = 3;
+        int h = stbiw__zhash(data + i)  &(stbiw__ZHASH - 1), best = 3;
         unsigned char* bestloc = 0;
         unsigned char** hlist = hash_table[h];
         int n = stbiw__sbcount(hlist);
@@ -917,7 +917,7 @@ STBIWDEF unsigned char* stbi_zlib_compress(unsigned char* data, int data_len, in
 
         if (bestloc) {
             // "lazy matching" - check match at *next* byte, and if it's better, do cur byte as literal
-            h = stbiw__zhash(data + i + 1) & (stbiw__ZHASH - 1);
+            h = stbiw__zhash(data + i + 1)  &(stbiw__ZHASH - 1);
             hlist = hash_table[h];
             n = stbiw__sbcount(hlist);
             for (j = 0; j < n; ++j) {
@@ -1026,7 +1026,7 @@ static unsigned int stbiw__crc32(unsigned char* buffer, int len)
     unsigned int crc = ~0u;
     int i;
     for (i = 0; i < len; ++i)
-        crc = (crc >> 8) ^ crc_table[buffer[i] ^ (crc & 0xff)];
+        crc = (crc >> 8) ^ crc_table[buffer[i] ^ (crc  &0xff)];
     return ~crc;
 #endif
 }
@@ -1217,7 +1217,7 @@ static void stbiw__jpg_writeBits(stbi__write_context* s, int* bitBufP, int* bitC
     bitCnt += bs[1];
     bitBuf |= bs[0] << (24 - bitCnt);
     while (bitCnt >= 8) {
-        unsigned char c = (bitBuf >> 16) & 255;
+        unsigned char c = (bitBuf >> 16)  &255;
         stbiw__putc(s, c);
         if (c == 255) {
             stbiw__putc(s, 0);
@@ -1284,7 +1284,7 @@ static void stbiw__jpg_calcBits(int val, unsigned short bits[2]) {
     while (tmp1 >>= 1) {
         ++bits[1];
     }
-    bits[0] = val & ((1 << bits[1]) - 1);
+    bits[0] = val  &((1 << bits[1]) - 1);
 }
 
 static int stbiw__jpg_processDU(stbi__write_context* s, int* bitBuf, int* bitCnt, float* CDU, int du_stride, float* fdtbl, int DC, const unsigned short HTDC[256][2], const unsigned short HTAC[256][2]) {

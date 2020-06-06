@@ -27,7 +27,7 @@ bool BvhNode::hit(const Ray &r, float tMin, float tMax, Intersect &rec)const
 		Intersect leftRec, rightRec;
 		bool hitLeft = left->hit(r, tMin, tMax, leftRec);
 		bool hitRight = right->hit(r, tMin, tMax, rightRec);
-		if (hitLeft & &hitRight)
+		if (hitLeft  && hitRight)
 		{
 			if (leftRec.t < rightRec.t)
 				rec = leftRec;

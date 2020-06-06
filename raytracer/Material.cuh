@@ -45,39 +45,39 @@ class Material
 {
 public:
 	__device__ virtual bool scatter(const Ray &rIn, const Intersect &rec, Vector3 &attenuation, Ray &scattered, curandState* localRandState)const = 0;
-	__device__ virtual Vector3 emitted(float u, float v, const Vector3& p)const { return Vector3(0, 0, 0); }
+	__device__ virtual Vector3 emitted(float u, float v, const Vector3 &p)const { return Vector3(0, 0, 0); }
 };
 
 class Lambert : public Material
 {
 public:
-	Texture* albedo;
-	__device__ Lambert(Texture* a) : albedo(a) {}
+	Texture* diffuse;
+	__device__ Lambert(Texture* a) : diffuse(a) {}
 	__device__ virtual bool scatter(const Ray &rIn, const Intersect &rec, Vector3 &attenuation, Ray &scattered, curandState* localRandState) const
 	{
 		Vector3 target = rec.p + rec.normal + randomInUnitSphere(localRandState);
 		scattered = Ray(rec.p, target - rec.p,rIn.time());
-		attenuation = albedo->value(rec.u,rec.v,rec.p);
+		attenuation = diffuse->value(rec.u,rec.v,rec.p);
 		return true;
 	}
 };
 
-class Metal : public Material
+class Reflective : public Material
 {
 public:
-	__device__ Metal(Texture* a, float f)
+	__device__ Reflective(Texture* a, float f)
 	{ 
-		albedo = a;
+		diffuse = a;
 		if (f < 1)fuzz = f; else fuzz = 1; 
 	}
-	__device__ virtual bool scatter(const Ray &rIn, const Intersect &rec, Vector3 &attenuation, Ray &scattered, curandState* localRandState) const
+	__device__ virtual bool scatter(const Ray& rIn, const Intersect& rec, Vector3& attenuation, Ray& scattered, curandState* localRandState) const override
 	{
 		Vector3 reflected = reflect(unitVector(rIn.direction()), rec.normal);
 		scattered = Ray(rec.p, reflected + fuzz * randomInUnitSphere(localRandState),rIn.time());
-		attenuation = albedo->value(0,0,rec.p);
+		attenuation = diffuse->value(0,0,rec.p);
 		return (dot(scattered.direction(), rec.normal) > 0.f);
 	}
-	Texture* albedo;
+	Texture* diffuse;
 	float fuzz;
 };
 
@@ -123,7 +123,7 @@ class DiffuseLight : public Material
 public:
 	Texture* emit;
 	__device__ DiffuseLight(Texture* a):emit(a){}
-	__device__ virtual bool scatter(const Ray& rIn, const Intersect& rec, Vector3& attenuation, Ray& scattered, curandState* localRandState)const {return false;}
+	__device__ virtual bool scatter(const Ray &rIn, const Intersect &rec, Vector3 &attenuation, Ray &scattered, curandState* localRandState)const {return false;}
 	__device__ virtual Vector3 emitted(float u,float v,const Vector3 &p)const
 	{
 		return emit->value(u, v, p);

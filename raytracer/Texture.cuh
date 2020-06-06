@@ -40,10 +40,10 @@ public:
 	int width, height;
 	__device__ ImageTexture(){}
 	__device__ ImageTexture(unsigned char* pixels,int A,int B):data(pixels),width(A),height(B){}
-	__device__ virtual Vector3 value(float u, float v, const Vector3& p) const;
+	__device__ virtual Vector3 value(float u, float v, const Vector3 &p) const;
 };
 
-__device__ inline Vector3 ImageTexture::value(float u, float v, const Vector3& p) const
+__device__ inline Vector3 ImageTexture::value(float u, float v, const Vector3 &p) const
 {
 	int i = u * width;
 	int j = (1 - v) * height - .001f;

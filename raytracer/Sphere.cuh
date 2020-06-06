@@ -16,7 +16,7 @@ public:
 	__device__ Sphere(Vector3 cen, float r, Material* m) : centre(cen), radius(r), matPtr(m) {};
 	__device__ virtual bool hit(const Ray &r, float tmin, float tmax, Intersect &rec) const;
 	__device__ virtual bool boundingBox(float t0,float t1,Aabb &box) const;
-	__device__ void getSphereUV(const Vector3& p, float& u, float& v)const;
+	__device__ void getSphereUV(const Vector3 &p, float &u, float &v)const;
 	Vector3 centre;
 	float radius;
 	Material* matPtr;
@@ -32,7 +32,7 @@ __device__ bool Sphere::hit(const Ray &r, float tMin, float tMax, Intersect &rec
 	if (discrim > 0)
 	{
 		float temp = (-b - sqrt(discrim)) / (2*a);
-		if (temp<tMax&&temp>tMin)
+		if (temp<tMax&& temp>tMin)
 		{
 			rec.t = temp;
 			rec.p = r.pointAtParameter(rec.t);
@@ -42,7 +42,7 @@ __device__ bool Sphere::hit(const Ray &r, float tMin, float tMax, Intersect &rec
 			return true;
 		}
 		temp = (-b + sqrt(discrim)) / (2*a);
-		if (temp<tMax&&temp>tMin)
+		if (temp<tMax&& temp>tMin)
 		{
 			rec.t = temp;
 			rec.p = r.pointAtParameter(rec.t);
@@ -61,7 +61,7 @@ __device__ bool Sphere::boundingBox(float t0, float t1, Aabb &box) const
 	return true;
 }
 
-__device__ inline void Sphere::getSphereUV(const Vector3& p, float& u, float& v) const
+__device__ inline void Sphere::getSphereUV(const Vector3 &p, float &u, float &v) const
 {
 	float phi = atan2(p.z(), p.x());
 	float theta = asin(p.y());
@@ -98,7 +98,7 @@ __device__ bool MovingSphere::hit(const Ray &r, float tMin, float tMax, Intersec
 	if (discrim > 0)
 	{
 		float temp = (-b - sqrt(discrim)) / (2 * a);
-		if (temp<tMax&&temp>tMin)
+		if (temp<tMax&& temp>tMin)
 		{
 			rec.t = temp;
 			rec.p = r.pointAtParameter(rec.t);
@@ -107,7 +107,7 @@ __device__ bool MovingSphere::hit(const Ray &r, float tMin, float tMax, Intersec
 			return true;
 		}
 		temp = (-b + sqrt(discrim)) / (2 * a);
-		if (temp<tMax&&temp>tMin)
+		if (temp<tMax&& temp>tMin)
 		{
 			rec.t = temp;
 			rec.p = r.pointAtParameter(rec.t);
