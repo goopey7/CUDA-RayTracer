@@ -4,7 +4,8 @@
 #include <iostream>
 #include <time.h>
 #include <float.h>
-#include <thread>  
+#include <thread>
+#include <future>
 #define STBI_MSC_SECURE_CRT
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "writeImage.h"
@@ -27,21 +28,21 @@
 #include "Transform.cuh"
 
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
-void check_cuda(cudaError_t result, char const *const func, const char *const file, int const line)
+void check_cuda(cudaError_t result, char const* const func, const char* const file, int const line)
 {
-    if (result) 
+	if (result)
 	{
-        std::cerr << "CUDA error = " << static_cast<unsigned int>(result) << " at " <<
-        file << ":" << line << " '" << func << "' \n";
-        // Make sure we call CUDA Device Reset before exiting
-        cudaDeviceReset();
-        exit(99);
-    }
+		std::cerr << "CUDA error = " << static_cast<unsigned int>(result) << " at " <<
+			file << ":" << line << " '" << func << "' \n";
+		// Make sure we call CUDA Device Reset before exiting
+		cudaDeviceReset();
+		exit(99);
+	}
 }
 
 //We can't use recursion here, as described in the book, because function calls are valuable. Recursion completely decimated the stack when I tried it
 //We can use iteration instead because we have to limit the number of bounces either way.
-__device__ Vector3 colour(const Ray &r, Hitable** world,int depth, curandState* localRandState)
+__device__ Vector3 colour(const Ray& r, Hitable** world, int depth, curandState* localRandState)
 {
 	Ray currentRay = r;
 	Vector3 currentAttenuation = Vector3(1.f, 1.f, 1.f);
@@ -66,7 +67,7 @@ __device__ Vector3 colour(const Ray &r, Hitable** world,int depth, curandState* 
 	}
 	return currentEmitted; //we have exceeded recursion
 }
-__device__ Vector3 colourUnlit(const Ray &r, Hitable** world, int depth,curandState* localRandState)
+__device__ Vector3 colourUnlit(const Ray& r, Hitable** world, int depth, curandState* localRandState)
 {
 	Ray currentRay = r;
 	Vector3 currentAttenuation = Vector3(1.f, 1.f, 1.f);
@@ -97,7 +98,7 @@ __device__ Vector3 colourUnlit(const Ray &r, Hitable** world, int depth,curandSt
 
 __global__ void randInit(curandState* randState)
 {
-	if (threadIdx.x == 0&& blockIdx.x == 0) 
+	if (threadIdx.x == 0 && blockIdx.x == 0)
 		curand_init(419, 0, 0, randState);
 }
 
@@ -112,40 +113,88 @@ __global__ void renderInit(int maxX, int maxY, curandState* randState)
 	curand_init(419 + pixelIndex, 0, 0, &randState[pixelIndex]);
 }
 
-__global__ void textureInit(unsigned char* texData,int width,int height,ImageTexture** tex)
+__global__ void textureInit(unsigned char* texData, int width, int height, ImageTexture** tex)
 {
 	if (threadIdx.x == 0 && blockIdx.x == 0)
 		*tex = new ImageTexture(texData, width, height);
 }
 
-__global__ void render(Vector3* fb,int maxX,int maxY,
-	int numSamples,Camera** cam, Hitable** world, curandState* randState)
+__global__ void render(Vector3* fb, int maxX, int maxY,
+	int numSamples, Camera** cam, Hitable** world, curandState* randState,int gpuId)
 {
-	int i=threadIdx.x+blockIdx.x*blockDim.x;
-	int j=threadIdx.y+blockIdx.y*blockDim.y;
-	if(i>=maxX||j>=maxY)return; //Don't want to do waste computer power on unnecessary calculations
-	int pixelIndex=j*maxX+i;
-	curandState localRandState = randState[pixelIndex];
-	Vector3 outCol(0, 0, 0);
-	for (int s = 0; s < numSamples; s++)
+	if (gpuId == 0)
 	{
-		float u = float(i+curand_uniform(&localRandState)) / float(maxX);
-		float v = float(j+curand_uniform(&localRandState)) / float(maxY);
-		Ray r = (*cam)->generateRay(u, v, &localRandState);
-		outCol += colour(r, world,100, &localRandState);
+		int i = threadIdx.x + blockIdx.x * blockDim.x;
+		int j = threadIdx.y + blockIdx.y * blockDim.y;
+		if (i >= .5*maxX || j >= maxY)return; //Don't want to do waste computer power on unnecessary calculations
+		int pixelIndex = j * maxX + i;
+		curandState localRandState = randState[pixelIndex];
+		Vector3 outCol(0, 0, 0);
+		for (int s = 0; s < numSamples; s++)
+		{
+			float u = float(i + curand_uniform(&localRandState)) / float(maxX);
+			float v = float(j + curand_uniform(&localRandState)) / float(maxY);
+			Ray r = (*cam)->generateRay(u, v, &localRandState);
+			outCol += colour(r, world, 100, &localRandState);
+		}
+		randState[pixelIndex] = localRandState;
+		outCol /= float(numSamples);
+		outCol[0] = sqrtf(outCol[0]);
+		outCol[1] = sqrtf(outCol[1]);
+		outCol[2] = sqrtf(outCol[2]);
+		fb[pixelIndex] = outCol;
 	}
-	randState[pixelIndex] = localRandState;
-	outCol /= float(numSamples);
-	outCol[0] = sqrtf(outCol[0]);
-	outCol[1] = sqrtf(outCol[1]);
-	outCol[2] = sqrtf(outCol[2]);
-	fb[pixelIndex] = outCol;
+	else if(gpuId==1)
+	{
+		int i = threadIdx.x + blockIdx.x * blockDim.x;
+		int j = threadIdx.y + blockIdx.y * blockDim.y;
+		if (i >= .5 * maxX || j >= maxY)return; //Don't want to do waste computer power on unnecessary calculations
+		i += .5 * maxX;
+		int pixelIndex = j * maxX + i;
+		curandState localRandState = randState[pixelIndex];
+		Vector3 outCol(0, 0, 0);
+		for (int s = 0; s < numSamples; s++)
+		{
+			float u = float(i + curand_uniform(&localRandState)) / float(maxX);
+			float v = float(j + curand_uniform(&localRandState)) / float(maxY);
+			Ray r = (*cam)->generateRay(u, v, &localRandState);
+			outCol += colour(r, world, 100, &localRandState);
+		}
+		randState[pixelIndex] = localRandState;
+		outCol /= float(numSamples);
+		outCol[0] = sqrtf(outCol[0]);
+		outCol[1] = sqrtf(outCol[1]);
+		outCol[2] = sqrtf(outCol[2]);
+		fb[pixelIndex] = outCol;
+	}
+	else
+	{
+		int i = threadIdx.x + blockIdx.x * blockDim.x;
+		int j = threadIdx.y + blockIdx.y * blockDim.y;
+		if (i >= maxX || j >= maxY)return; //Don't want to do waste computer power on unnecessary calculations
+		int pixelIndex = j * maxX + i;
+		curandState localRandState = randState[pixelIndex];
+		Vector3 outCol(0, 0, 0);
+		for (int s = 0; s < numSamples; s++)
+		{
+			float u = float(i + curand_uniform(&localRandState)) / float(maxX);
+			float v = float(j + curand_uniform(&localRandState)) / float(maxY);
+			Ray r = (*cam)->generateRay(u, v, &localRandState);
+			outCol += colour(r, world, 100, &localRandState);
+		}
+		randState[pixelIndex] = localRandState;
+		outCol /= float(numSamples);
+		outCol[0] = sqrtf(outCol[0]);
+		outCol[1] = sqrtf(outCol[1]);
+		outCol[2] = sqrtf(outCol[2]);
+		fb[pixelIndex] = outCol;
+	}
 }
 
 #define RND (curand_uniform(&localRandState))
 
 //Scene 1: Loads Of Spheres!
-__device__ inline void scene1(Hitable** dList, Hitable** dWorld, Camera** dCamera, int width, int height, ImageTexture** texture,curandState* randState)
+__device__ inline void scene1(Hitable** dList, Hitable** dWorld, Camera** dCamera, int width, int height, ImageTexture** texture, curandState* randState)
 {
 	curandState localRandState = *randState;
 	Texture* checker = new CheckerTexture(new ConstantTexture(Vector3(.2f, .3f, .1f)),
@@ -161,7 +210,7 @@ __device__ inline void scene1(Hitable** dList, Hitable** dWorld, Camera** dCamer
 			Vector3 centre(a + RND, .2f, b + RND);
 			if (chooseMat < .8f)
 			{
-				dList[i++] = new MovingSphere(centre,centre+Vector3(0,.5f*RND,0),0.f,1.f,.2f, new Lambert(new ConstantTexture(Vector3(RND * RND, RND * RND, RND * RND))));
+				dList[i++] = new MovingSphere(centre, centre + Vector3(0, .5f * RND, 0), 0.f, 1.f, .2f, new Lambert(new ConstantTexture(Vector3(RND * RND, RND * RND, RND * RND))));
 			}
 			else if (chooseMat < .95f)
 			{
@@ -174,7 +223,7 @@ __device__ inline void scene1(Hitable** dList, Hitable** dWorld, Camera** dCamer
 		}
 	}
 	dList[i++] = new Sphere(Vector3(0, 1, 0), 1.0, new Dielectric(.2f));
-	dList[i++] = new MovingSphere(Vector3(0,1,0), Vector3(1,1,0),0.f,1.f,1.f,new Lambert(new ConstantTexture(Vector3(1.f,0.f,0.f))));
+	dList[i++] = new MovingSphere(Vector3(0, 1, 0), Vector3(1, 1, 0), 0.f, 1.f, 1.f, new Lambert(new ConstantTexture(Vector3(1.f, 0.f, 0.f))));
 	dList[i++] = new Sphere(Vector3(4, 1, 0), 1.0, new Reflective(new ConstantTexture(Vector3(0.7, 0.6, 0.5)), .1));
 	*randState = localRandState;
 	*dWorld = new HitableList(dList, 22 * 22 + 1 + 3);
@@ -189,20 +238,20 @@ __device__ inline void scene1(Hitable** dList, Hitable** dWorld, Camera** dCamer
 		float(width) / float(height),
 		aperture,
 		dist_to_focus,
-		0.f,1.f);
+		0.f, 1.f);
 }
 
 //Scene 2: Lighting up a sphere
-__device__ inline void scene2(Hitable** dList, Hitable** dWorld, Camera** dCamera, int width, int height, ImageTexture** texture,curandState* randState)
+__device__ inline void scene2(Hitable** dList, Hitable** dWorld, Camera** dCamera, int width, int height, ImageTexture** texture, curandState* randState)
 {
 	curandState localRandState = *randState;
 	Texture* checker = new CheckerTexture(new ConstantTexture(Vector3(.2f, .3f, .1f)),
 		new ConstantTexture(Vector3(.9f, .9f, .9f)));
 	int i = 0;
-	dList[i++] = new Sphere(Vector3(0.f, -1000.f, -1.f), 1000,new Lambert(checker));
+	dList[i++] = new Sphere(Vector3(0.f, -1000.f, -1.f), 1000, new Lambert(checker));
 	//dList[i++] = new Sphere(Vector3(0, 1, 0), 1.f, new Lambert(*texture));
-	dList[i++] = new RotateY(new Box(Vector3(0, 0, 0), Vector3(1, 1, 1), new Lambert(*texture)),120);
-	dList[i++] = new RotateY(new Sphere(Vector3(0, 7, 0), 2, new DiffuseLight(new ConstantTexture(Vector3(4, 4, 4)))),120);
+	dList[i++] = new RotateY(new Box(Vector3(0, 0, 0), Vector3(1, 1, 1), new Lambert(*texture)), 120);
+	dList[i++] = new RotateY(new Sphere(Vector3(0, 7, 0), 2, new DiffuseLight(new ConstantTexture(Vector3(4, 4, 4)))), 120);
 	//dList[i++] = new XYRect(3, 5, 1, 3, -2, new DiffuseLight(new ConstantTexture(Vector3(4, 4, 4))));
 	*dWorld = new HitableList(dList, i);
 	Vector3 lookfrom(13, 2, 3);
@@ -216,11 +265,11 @@ __device__ inline void scene2(Hitable** dList, Hitable** dWorld, Camera** dCamer
 		float(width) / float(height),
 		aperture,
 		distToFocus,
-		0.f,1.f);
+		0.f, 1.f);
 }
 
 //Scene 3: Cornell Box
-__device__ inline void scene3(Hitable** dList,Hitable** dWorld, Camera** dCamera,int width,int height,ImageTexture** texture,curandState* randState)
+__device__ inline void scene3(Hitable** dList, Hitable** dWorld, Camera** dCamera, int width, int height, ImageTexture** texture, curandState* randState)
 {
 	int i = 0;
 	Material* red = new Lambert(new ConstantTexture(Vector3(.65, .05, .05)));
@@ -236,7 +285,7 @@ __device__ inline void scene3(Hitable** dList,Hitable** dWorld, Camera** dCamera
 	dList[i++] = new FlipNormals(new XYRect(0, 555, 0, 555, 555, white));
 	Box* b1 = new Box(Vector3(0, 0, 0), Vector3(165, 165, 165), white);
 	dList[i++] = new Translate(new RotateY(b1, -18), Vector3(130, 0, 65));
-	Box* b2 = new Box(Vector3(0, 0, 0), Vector3(165, 330, 165),white);
+	Box* b2 = new Box(Vector3(0, 0, 0), Vector3(165, 330, 165), white);
 	dList[i++] = new Translate(new RotateY(b2, 15), Vector3(265, 0, 295));
 	*dWorld = new HitableList(dList, i);
 	Vector3 lookfrom(278, 278, -800);
@@ -249,9 +298,9 @@ __device__ inline void scene3(Hitable** dList,Hitable** dWorld, Camera** dCamera
 }
 
 //Select active scene here
-__global__ void createWorld(Hitable** dList, Hitable** dWorld,Camera** dCamera,int width,int height,ImageTexture** texture,curandState* randState)
+__global__ void createWorld(Hitable** dList, Hitable** dWorld, Camera** dCamera, int width, int height, ImageTexture** texture, curandState* randState)
 {
-	if (threadIdx.x == 0&& blockIdx.x == 0)
+	if (threadIdx.x == 0 && blockIdx.x == 0)
 	{
 		//scene1(dList, dWorld, dCamera, width, height, texture, randState);
 		//scene2(dList, dWorld, dCamera, width, height, texture, randState);
@@ -259,7 +308,7 @@ __global__ void createWorld(Hitable** dList, Hitable** dWorld,Camera** dCamera,i
 	}
 }
 
-__global__ void freeWorld(Hitable** dList, Hitable** dWorld,Camera** dCamera,int numObjects)
+__global__ void freeWorld(Hitable** dList, Hitable** dWorld, Camera** dCamera, int numObjects)
 {
 	for (int i = 0; i < numObjects; i++)
 	{
@@ -267,40 +316,22 @@ __global__ void freeWorld(Hitable** dList, Hitable** dWorld,Camera** dCamera,int
 		delete dList[i];
 		printf("Success at index %i\n", i);
 	}
-	delete *dWorld;
-	delete *dCamera;
+	delete* dWorld;
+	delete* dCamera;
 }
 
-Vector3* renderFirstHalf()
+Vector3* renderFirstHalf(int width,int height,int numSamples,int tx,int ty)
 {
-	
-}
-
-Vector3* renderSecondHalf()
-{
-	
-}
-
-int main()
-{
-	// 8k is 7680x4320
-	const int width = 1920;
-	const int height = 1080;
-	const int numSamples = 10;
-	int tx = 16;
-	int ty = 16;
-	std::cerr << "Rendering a " << width << "x" << height << " image";
-	std::cerr << "\nUsing " << tx << "x" << ty << " blocks\n";
-	int res = width * height;
+	cudaSetDevice(0);
+	const int res = width * height;
 	size_t fbSize = res * sizeof(Vector3);
-
 	//Allocate frame buffer
-	Vector3* fb;
-	checkCudaErrors(cudaMallocManaged((void**)&fb, fbSize));
+	Vector3* fb0;
+	checkCudaErrors(cudaMallocManaged((void**)&fb0, fbSize));
 
 	//Initialise and allocate textures
 	int texX, texY, texN;
-	unsigned char* texDataHost = stbi_load("earthmap.jpg", &texX, &texY, &texN, 0);
+	unsigned char* texDataHost = stbi_load("assets/earthmap.jpg", &texX, &texY, &texN, 0);
 
 	unsigned char* texData;
 	checkCudaErrors(cudaMallocManaged(&texData, texX * texY * texN * sizeof(unsigned char)));
@@ -329,12 +360,9 @@ int main()
 	checkCudaErrors(cudaMalloc((void**)&dWorld, sizeof(Hitable*)));
 	Camera** dCamera;
 	checkCudaErrors(cudaMalloc((void**)&dCamera, sizeof(Camera*)));
-	createWorld<<<1, 1 >>>(dList, dWorld, dCamera, width, height, texture, dRandState2);
+	createWorld << <1, 1 >> > (dList, dWorld, dCamera, width, height, texture, dRandState2);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
-
-	clock_t start, stop;
-
 
 	//Render the frame buffer
 	dim3 blocks(width / tx + 1, height / ty + 1);
@@ -343,48 +371,230 @@ int main()
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 	std::cerr << "Rendering...\n";
-	start = clock();
-	render << <blocks, threads >> > (fb, width, height, numSamples, dCamera, dWorld, dRandState);
+	
+	render << <blocks, threads >> > (fb0, width, height, numSamples, dCamera, dWorld, dRandState, 0);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
-	stop = clock();
-	double elapsed = (double)(stop - start) / CLOCKS_PER_SEC;
-	std::string fileName = "output/multiGPUTesting";
-	fileName += ".png";
-	std::cerr << "\nRendered in " << elapsed << " seconds to "<<fileName<<std::endl;
 
-	//Output frame buffer as an image
-	uint8_t* pixels = new uint8_t[width * height * 3];
-	int index = 0;
-	for (int j = height - 1; j >= 0; j--)
+	return fb0;
+}
+
+Vector3* renderSecondHalf(int width,int height,int numSamples, int tx,int ty)
+{
+	cudaSetDevice(1);
+	const int res = width * height;
+	size_t fbSize = res * sizeof(Vector3);
+	//Allocate frame buffer
+	Vector3* fb1;
+	checkCudaErrors(cudaMallocManaged((void**)&fb1, fbSize));
+
+	//Initialise and allocate textures
+	int texX, texY, texN;
+	unsigned char* texDataHost = stbi_load("assets/earthmap.jpg", &texX, &texY, &texN, 0);
+
+	unsigned char* texData;
+	checkCudaErrors(cudaMallocManaged(&texData, texX * texY * texN * sizeof(unsigned char)));
+	checkCudaErrors(cudaMemcpy(texData, texDataHost, texX * texY * texN * sizeof(unsigned char), cudaMemcpyHostToDevice));
+
+	ImageTexture** texture;
+	checkCudaErrors(cudaMalloc((void**)&texture, sizeof(ImageTexture*)));
+	textureInit << <1, 1 >> > (texData, texX, texY, texture);
+
+	//Allocate random state
+	curandState* dRandState;
+	checkCudaErrors(cudaMalloc((void**)&dRandState, res * sizeof(curandState)));
+	curandState* dRandState2;
+	checkCudaErrors(cudaMalloc((void**)&dRandState2, sizeof(curandState)));
+
+	// we need a 2nd random state to be initialised for the world creation
+	randInit << <1, 1 >> > (dRandState2);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
+	// Create our world and Camera
+	Hitable** dList;
+	int numObjects = 8;
+	checkCudaErrors(cudaMalloc((void**)&dList, numObjects * sizeof(Hitable*)));
+	Hitable** dWorld;
+	checkCudaErrors(cudaMalloc((void**)&dWorld, sizeof(Hitable*)));
+	Camera** dCamera;
+	checkCudaErrors(cudaMalloc((void**)&dCamera, sizeof(Camera*)));
+	createWorld << <1, 1 >> > (dList, dWorld, dCamera, width, height, texture, dRandState2);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
+	//Render the frame buffer
+	dim3 blocks(width / tx + 1, height / ty + 1);
+	dim3 threads(tx, ty);
+	renderInit << <blocks, threads >> > (width, height, dRandState);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
+	render << <blocks, threads >> > (fb1, width, height, numSamples, dCamera, dWorld, dRandState, 1);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
+	return fb1;
+}
+
+Vector3* renderFull(int width,int height,int numSamples,int tx,int ty)
+{
+	const int res = width * height;
+	size_t fbSize = res * sizeof(Vector3);
+	//Allocate frame buffer
+	Vector3* fb;
+	checkCudaErrors(cudaMallocManaged((void**)&fb, fbSize));
+
+	//Initialise and allocate textures
+	int texX, texY, texN;
+	unsigned char* texDataHost = stbi_load("assets/earthmap.jpg", &texX, &texY, &texN, 0);
+
+	unsigned char* texData;
+	checkCudaErrors(cudaMallocManaged(&texData, texX * texY * texN * sizeof(unsigned char)));
+	checkCudaErrors(cudaMemcpy(texData, texDataHost, texX * texY * texN * sizeof(unsigned char), cudaMemcpyHostToDevice));
+
+	ImageTexture** texture;
+	checkCudaErrors(cudaMalloc((void**)&texture, sizeof(ImageTexture*)));
+	textureInit << <1, 1 >> > (texData, texX, texY, texture);
+
+	//Allocate random state
+	curandState* dRandState;
+	checkCudaErrors(cudaMalloc((void**)&dRandState, res * sizeof(curandState)));
+	curandState* dRandState2;
+	checkCudaErrors(cudaMalloc((void**)&dRandState2, sizeof(curandState)));
+
+	// we need a 2nd random state to be initialised for the world creation
+	randInit << <1, 1 >> > (dRandState2);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
+	// Create our world and Camera
+	Hitable** dList;
+	int numObjects = 8;
+	checkCudaErrors(cudaMalloc((void**)&dList, numObjects * sizeof(Hitable*)));
+	Hitable** dWorld;
+	checkCudaErrors(cudaMalloc((void**)&dWorld, sizeof(Hitable*)));
+	Camera** dCamera;
+	checkCudaErrors(cudaMalloc((void**)&dCamera, sizeof(Camera*)));
+	createWorld << <1, 1 >> > (dList, dWorld, dCamera, width, height, texture, dRandState2);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
+	//Render the frame buffer
+	dim3 blocks(width / tx + 1, height / ty + 1);
+	dim3 threads(tx, ty);
+	renderInit << <blocks, threads >> > (width, height, dRandState);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
+	render << <blocks, threads >> > (fb, width, height, numSamples, dCamera, dWorld, dRandState, 3);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
+	return fb;
+}
+
+int main()
+{
+	// 8k is 7680x4320
+	const int width = 1920;
+	const int height = 1080;
+	const int numSamples = 10000;
+	const bool bTwoGPUs = true;
+	int tx = 16;
+	int ty = 16;
+	std::cerr << "Rendering a " << width << "x" << height << " image with "<<(bTwoGPUs?"2 GPUs.":"1 GPU.");
+	std::cerr << "\nUsing " << tx << "x" << ty << " blocks\n";
+	clock_t start, stop;
+	if (bTwoGPUs)
 	{
-		for (int i = 0; i < width; i++)
+		start = clock();
+		std::future<Vector3*> t0 = std::async(&renderFirstHalf, width, height, numSamples, tx, ty);
+		std::future<Vector3*> t1 = std::async(&renderSecondHalf, width, height, numSamples, tx, ty);
+		t0.wait();
+		t1.wait();
+		stop = clock();
+		auto fb0 = t0.get();
+		auto fb1 = t1.get();
+		double elapsed = (double)(stop - start) / CLOCKS_PER_SEC;
+		std::string fileName = "output/multiGPUTesting";
+		fileName += ".png";
+		std::cerr << "\nRendered in " << elapsed << " seconds to " << fileName << std::endl;
+
+		//Output frame buffer as an image
+		uint8_t* pixels = new uint8_t[width * height * 3];
+		int index = 0;
+		for (int j = height - 1; j >= 0; j--)
 		{
-			size_t pixelIndex = j * width + i;
-			float r = fb[pixelIndex].r();
-			float g = fb[pixelIndex].g();
-			float b = fb[pixelIndex].b();
+			for (int i = 0; i < width; i++)
+			{
+				size_t pixelIndex = j * width + i;
+				float r, g, b;
+				if (i < width / 2)
+				{
+					r = fb0[pixelIndex].r();
+					g = fb0[pixelIndex].g();
+					b = fb0[pixelIndex].b();
+				}
+				else
+				{
+					r = fb1[pixelIndex].r();
+					g = fb1[pixelIndex].g();
+					b = fb1[pixelIndex].b();
+				}
+				int ir = int(255.99 * r);
+				int ig = int(255.99 * g);
+				int ib = int(255.99 * b);
 
-			int ir = int(255.99 * r);
-			int ig = int(255.99 * g);
-			int ib = int(255.99 * b);
-
-			pixels[index++] = ir;
-			pixels[index++] = ig;
-			pixels[index++] = ib;
+				pixels[index++] = ir;
+				pixels[index++] = ig;
+				pixels[index++] = ib;
+			}
 		}
+		stbi_write_png(fileName.c_str(), width, height, 3, pixels, width * 3);
 	}
-	stbi_write_png(fileName.c_str(), width, height, 3, pixels, width * 3);
+	else
+	{
+		start = clock();
+		auto fb = renderFull(width, height, numSamples, tx, ty);
+		stop = clock();
+		double elapsed = (double)(stop - start) / CLOCKS_PER_SEC;
+		std::string fileName = "output/singleGPUTesting";
+		fileName += ".png";
+		std::cerr << "\nRendered in " << elapsed << " seconds to " << fileName << std::endl;
+		//Output frame buffer as an image
+		uint8_t* pixels = new uint8_t[width * height * 3];
+		int index = 0;
+		for (int j = height - 1; j >= 0; j--)
+		{
+			for (int i = 0; i < width; i++)
+			{
+				size_t pixelIndex = j * width + i;
+				float r = fb[pixelIndex].r();
+				float g = fb[pixelIndex].g();
+				float b = fb[pixelIndex].b();
+				int ir = int(255.99 * r);
+				int ig = int(255.99 * g);
+				int ib = int(255.99 * b);
+
+				pixels[index++] = ir;
+				pixels[index++] = ig;
+				pixels[index++] = ib;
+			}
+		}
+		stbi_write_png(fileName.c_str(), width, height, 3, pixels, width * 3);
+		
+	}
 
 	//clean up
-	freeWorld<<<1,1>>>(dList, dWorld, dCamera, numObjects);
+/*	freeWorld << <1, 1 >> > (dList, dWorld, dCamera, numObjects);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 	checkCudaErrors(cudaFree(dCamera));
 	checkCudaErrors(cudaFree(dRandState));
 	checkCudaErrors(cudaFree(dList));
 	checkCudaErrors(cudaFree(dWorld));
-	checkCudaErrors(cudaFree(fb));
-	checkCudaErrors(cudaFree(texData));
+	checkCudaErrors(cudaFree(fb0));
+	checkCudaErrors(cudaFree(texData));*/
 	return 0;
 }
