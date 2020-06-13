@@ -1,11 +1,9 @@
 /*
 	HitableList - Sam Collier
 */
-#ifndef HITABLELISTH
-#define HITABLELISTH
-
 #include "Hitable.cuh"
-
+#ifndef HITLISTH
+#define HITLISTH
 class HitableList : public Hitable
 {
 public:
@@ -38,10 +36,10 @@ __device__ bool HitableList::boundingBox(float t0, float t1, Aabb &box)const
 	Aabb tempBox;
 	bool firstTrue = list[0]->boundingBox(t0, t1, tempBox);
 	if (!firstTrue)return false;
-	else box = tempBox;
+	box = tempBox;
 	for (int i = 1; i < listSize; i++)
 	{
-		if (list[0]->boundingBox(t0, t1, tempBox))
+		if (list[i]->boundingBox(t0, t1, tempBox))
 			box = surroundingBox(box, tempBox);
 		else return false;
 	}

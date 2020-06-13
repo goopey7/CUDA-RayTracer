@@ -62,15 +62,15 @@ public:
 	}
 };
 
-class Reflective : public Material
+class Metal : public Material
 {
 public:
-	__device__ Reflective(Texture* a, float f)
+	__device__ Metal(Texture* a, float f)
 	{ 
 		diffuse = a;
 		if (f < 1)fuzz = f; else fuzz = 1; 
 	}
-	__device__ virtual bool scatter(const Ray& rIn, const Intersect& rec, Vector3& attenuation, Ray& scattered, curandState* localRandState) const override
+	__device__ virtual bool scatter(const Ray &rIn, const Intersect &rec, Vector3 &attenuation, Ray &scattered, curandState* localRandState) const override
 	{
 		Vector3 reflected = reflect(unitVector(rIn.direction()), rec.normal);
 		scattered = Ray(rec.p, reflected + fuzz * randomInUnitSphere(localRandState),rIn.time());
@@ -81,11 +81,11 @@ public:
 	float fuzz;
 };
 
-class Dielectric : public Material
+class Glass : public Material
 {
 public:
 	float refIdx;
-	__device__ Dielectric(float ri) : refIdx(ri) {}
+	__device__ Glass(float ri) : refIdx(ri) {}
 	__device__ virtual bool scatter(const Ray &rIn, const Intersect &rec, Vector3 &attenuation, Ray &scattered, curandState* localRandState) const
 	{
 		Vector3 outwardNorm;
@@ -127,6 +127,19 @@ public:
 	__device__ virtual Vector3 emitted(float u,float v,const Vector3 &p)const
 	{
 		return emit->value(u, v, p);
+	}
+};
+
+class Isotropic : public Material
+{
+public:
+	Texture* diffuse;
+	__device__ Isotropic(Texture* a) :diffuse(a){}
+	__device__ virtual bool scatter(const Ray &rIn, const Intersect &rec, Vector3 &attenuation, Ray &scattered, curandState* localRandState)const
+	{
+		scattered = Ray(rec.p, randomInUnitSphere(localRandState));
+		attenuation = diffuse->value(rec.u, rec.v, rec.p);
+		return true;
 	}
 };
 

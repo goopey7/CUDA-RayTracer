@@ -98,6 +98,7 @@
     <ClInclude Include="Transform.cuh" />
     <ClInclude Include="Triangle.cuh" />
     <ClInclude Include="Vector3.cuh" />
+    <ClInclude Include="Volumes.cuh" />
     <ClInclude Include="writeImage.h" />
   </ItemGroup>
   <ItemGroup>

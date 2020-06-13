@@ -1,3 +1,6 @@
+/*
+	Transform - Sam Collier
+*/
 #ifndef TRANSH
 #define TRANSH
 
@@ -7,9 +10,8 @@ class Translate : public Surface
 {
 public:
 	Vector3 offset;
-	Surface* hitablePtr;
-	Material* matPtr;
-	__device__ Translate(Surface* p,const Vector3 &displacement):hitablePtr(p),offset(displacement),matPtr(p->matPtr){}
+	Hitable* hitablePtr;
+	__device__ Translate(Hitable* p,const Vector3 &displacement):hitablePtr(p),offset(displacement){}
 	__device__ virtual bool hit(const Ray &r, float tMin, float tMax, Intersect &rec)const;
 	__device__ virtual bool boundingBox(float t0, float t1, Aabb &box)const;
 };
@@ -35,15 +37,15 @@ __device__ inline bool Translate::boundingBox(float t0, float t1, Aabb &box) con
 	return false;
 }
 
-class RotateY : public Surface
+class RotateY : public Hitable
 {
 public:
-	Surface* hitablePtr;
+	Hitable* hitablePtr;
 	float sinTheta, cosTheta;
 	bool bHasBox;
 	Aabb bbox;
 	
-	__device__ RotateY(Surface* p, float angle);
+	__device__ RotateY(Hitable* p, float angle);
 	__device__ virtual bool hit(const Ray &r, float tMin, float tMax, Intersect &rec)const;
 	__device__ virtual bool boundingBox(float t0, float t1, Aabb &box)const
 	{
@@ -52,7 +54,7 @@ public:
 	}
 };
 
-__device__ RotateY::RotateY(Surface* p, float angle) : hitablePtr(p)
+__device__ RotateY::RotateY(Hitable* p, float angle) : hitablePtr(p)
 {
 	float radians = (M_PI / 180.f) * angle;
 	sinTheta = sin(radians);

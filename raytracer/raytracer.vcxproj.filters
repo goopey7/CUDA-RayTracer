@@ -21,6 +21,7 @@
     <ClInclude Include="writeImage.h" />
     <ClInclude Include="Box.cuh" />
     <ClInclude Include="Transform.cuh" />
+    <ClInclude Include="Volumes.cuh" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\..\..\..\Desktop\earthmap.jpg" />

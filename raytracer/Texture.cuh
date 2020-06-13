@@ -1,3 +1,6 @@
+/*
+	Textures - Sam Collier
+*/
 #ifndef TEXTUREH
 #define TEXTUREH
 #include "Vector3.cuh"

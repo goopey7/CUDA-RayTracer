@@ -1,3 +1,6 @@
+/*
+	Box - Sam Collier
+*/
 #ifndef BOXH
 #define BOXH
 

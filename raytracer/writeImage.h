@@ -216,9 +216,9 @@ STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
 #include <string.h>
 #include <math.h>
 
-#if defined(STBIW_MALLOC) && defined(STBIW_FREE) && (defined(STBIW_REALLOC) || defined(STBIW_REALLOC_SIZED))
+#if defined(STBIW_MALLOC) &&defined(STBIW_FREE) &&(defined(STBIW_REALLOC) || defined(STBIW_REALLOC_SIZED))
 // ok
-#elif !defined(STBIW_MALLOC) && !defined(STBIW_FREE) && !defined(STBIW_REALLOC) && !defined(STBIW_REALLOC_SIZED)
+#elif !defined(STBIW_MALLOC) &&!defined(STBIW_FREE) &&!defined(STBIW_REALLOC) &&!defined(STBIW_REALLOC_SIZED)
 // ok
 #else
 #error "Must define all or none of STBIW_MALLOC, STBIW_FREE, and STBIW_REALLOC (or STBIW_REALLOC_SIZED)."
@@ -284,7 +284,7 @@ static void stbi__stdio_write(void* context, void* data, int size)
     fwrite(data, 1, size, (FILE*)context);
 }
 
-#if defined(_MSC_VER) && defined(STBI_WINDOWS_UTF8)
+#if defined(_MSC_VER) &&defined(STBI_WINDOWS_UTF8)
 #ifdef __cplusplus
 #define STBIW_EXTERN extern "C"
 #else
@@ -302,7 +302,7 @@ STBIWDEF int stbiw_convert_wchar_to_utf8(char* buffer, size_t bufferlen, const w
 static FILE* stbiw__fopen(char const* filename, char const* mode)
 {
     FILE* f;
-#if defined(_MSC_VER) && defined(STBI_WINDOWS_UTF8)
+#if defined(_MSC_VER) &&defined(STBI_WINDOWS_UTF8)
     wchar_t wMode[64];
     wchar_t wFilename[1024];
     if (0 == MultiByteToWideChar(65001 /* UTF8 */, 0, filename, -1, wFilename, sizeof(wFilename)))
@@ -318,7 +318,7 @@ static FILE* stbiw__fopen(char const* filename, char const* mode)
     f = _wfopen(wFilename, wMode);
 #endif
 
-#elif defined(_MSC_VER) && _MSC_VER >= 1400
+#elif defined(_MSC_VER) &&_MSC_VER >= 1400
     if (0 != fopen_s(&f, filename, mode))
         f = 0;
 #else
@@ -541,7 +541,7 @@ static int stbi_write_tga_core(stbi__write_context* s, int x, int y, int comp, v
                     diff = memcmp(begin, row + (i + 1) * comp, comp);
                     if (diff) {
                         const unsigned char* prev = begin;
-                        for (k = i + 2; k < x && len < 128; ++k) {
+                        for (k = i + 2; k < x &&len < 128; ++k) {
                             if (memcmp(prev, row + k * comp, comp)) {
                                 prev += comp;
                                 ++len;
@@ -553,7 +553,7 @@ static int stbi_write_tga_core(stbi__write_context* s, int x, int y, int comp, v
                         }
                     }
                     else {
-                        for (k = i + 2; k < x && len < 128; ++k) {
+                        for (k = i + 2; k < x &&len < 128; ++k) {
                             if (!memcmp(begin, row + k * comp, comp)) {
                                 ++len;
                             }
@@ -702,7 +702,7 @@ static void stbiw__write_hdr_scanline(stbi__write_context* s, int width, int nco
                 // find first run
                 r = x;
                 while (r + 2 < width) {
-                    if (comp[r] == comp[r + 1] && comp[r] == comp[r + 2])
+                    if (comp[r] == comp[r + 1] &&comp[r] == comp[r + 2])
                         break;
                     ++r;
                 }
@@ -718,7 +718,7 @@ static void stbiw__write_hdr_scanline(stbi__write_context* s, int width, int nco
                 // if there's a run, output it
                 if (r + 2 < width) { // same test as what we break out of in search loop, so only true if we break'd
                    // find next byte after run
-                    while (r < width && comp[r] == comp[x])
+                    while (r < width &&comp[r] == comp[x])
                         ++r;
                     // output run up to r
                     while (x < r) {
@@ -836,7 +836,7 @@ static int stbiw__zlib_bitrev(int code, int codebits)
 static unsigned int stbiw__zlib_countm(unsigned char* a, unsigned char* b, int limit)
 {
     int i;
-    for (i = 0; i < limit && i < 258; ++i)
+    for (i = 0; i < limit &&i < 258; ++i)
         if (a[i] != b[i]) break;
     return i;
 }
@@ -909,7 +909,7 @@ STBIWDEF unsigned char* stbi_zlib_compress(unsigned char* data, int data_len, in
             }
         }
         // when hash table entry is too long, delete half the entries
-        if (hash_table[h] && stbiw__sbn(hash_table[h]) == 2 * quality) {
+        if (hash_table[h] &&stbiw__sbn(hash_table[h]) == 2 * quality) {
             STBIW_MEMMOVE(hash_table[h], hash_table[h] + quality, sizeof(hash_table[h][0]) * quality);
             stbiw__sbn(hash_table[h]) = quality;
         }
@@ -933,7 +933,7 @@ STBIWDEF unsigned char* stbi_zlib_compress(unsigned char* data, int data_len, in
 
         if (bestloc) {
             int d = (int)(data + i - bestloc); // distance back
-            STBIW_ASSERT(d <= 32767 && best <= 258);
+            STBIW_ASSERT(d <= 32767 &&best <= 258);
             for (j = 0; best > lengthc[j + 1] - 1; ++j);
             stbiw__zlib_huff(j + 257);
             if (lengtheb[j]) stbiw__zlib_add(best - lengthc[j], lengtheb[j]);
@@ -1044,7 +1044,7 @@ static void stbiw__wpcrc(unsigned char** data, int len)
 static unsigned char stbiw__paeth(int a, int b, int c)
 {
     int p = a + b - c, pa = abs(p - a), pb = abs(p - b), pc = abs(p - c);
-    if (pa <= pb && pa <= pc) return STBIW_UCHAR(a);
+    if (pa <= pb &&pa <= pc) return STBIW_UCHAR(a);
     if (pb <= pc) return STBIW_UCHAR(b);
     return STBIW_UCHAR(c);
 }
@@ -1327,7 +1327,7 @@ static int stbiw__jpg_processDU(stbi__write_context* s, int* bitBuf, int* bitCnt
     }
     // Encode ACs
     end0pos = 63;
-    for (; (end0pos > 0) && (DU[end0pos] == 0); --end0pos) {
+    for (; (end0pos > 0) &&(DU[end0pos] == 0); --end0pos) {
     }
     // end0pos = first element in reverse order !=0
     if (end0pos == 0) {
@@ -1338,7 +1338,7 @@ static int stbiw__jpg_processDU(stbi__write_context* s, int* bitBuf, int* bitCnt
         int startpos = i;
         int nrzeroes;
         unsigned short bits[2];
-        for (; DU[i] == 0 && i <= end0pos; ++i) {
+        for (; DU[i] == 0 &&i <= end0pos; ++i) {
         }
         nrzeroes = i - startpos;
         if (nrzeroes >= 16) {

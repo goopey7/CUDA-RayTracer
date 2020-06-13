@@ -1,3 +1,6 @@
+/*
+	Surface - Sam Collier
+*/
 #ifndef SURFACEH
 #define SURFACEH
 #include "Hitable.cuh"

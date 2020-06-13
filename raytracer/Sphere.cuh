@@ -32,7 +32,7 @@ __device__ bool Sphere::hit(const Ray &r, float tMin, float tMax, Intersect &rec
 	if (discrim > 0)
 	{
 		float temp = (-b - sqrt(discrim)) / (2*a);
-		if (temp<tMax&& temp>tMin)
+		if (temp<tMax&&temp>tMin)
 		{
 			rec.t = temp;
 			rec.p = r.pointAtParameter(rec.t);
@@ -42,7 +42,7 @@ __device__ bool Sphere::hit(const Ray &r, float tMin, float tMax, Intersect &rec
 			return true;
 		}
 		temp = (-b + sqrt(discrim)) / (2*a);
-		if (temp<tMax&& temp>tMin)
+		if (temp<tMax&&temp>tMin)
 		{
 			rec.t = temp;
 			rec.p = r.pointAtParameter(rec.t);
@@ -98,7 +98,7 @@ __device__ bool MovingSphere::hit(const Ray &r, float tMin, float tMax, Intersec
 	if (discrim > 0)
 	{
 		float temp = (-b - sqrt(discrim)) / (2 * a);
-		if (temp<tMax&& temp>tMin)
+		if (temp<tMax&&temp>tMin)
 		{
 			rec.t = temp;
 			rec.p = r.pointAtParameter(rec.t);
@@ -107,7 +107,7 @@ __device__ bool MovingSphere::hit(const Ray &r, float tMin, float tMax, Intersec
 			return true;
 		}
 		temp = (-b + sqrt(discrim)) / (2 * a);
-		if (temp<tMax&& temp>tMin)
+		if (temp<tMax&&temp>tMin)
 		{
 			rec.t = temp;
 			rec.p = r.pointAtParameter(rec.t);

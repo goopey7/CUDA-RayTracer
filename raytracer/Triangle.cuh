@@ -1,7 +1,7 @@
 /*
 	Triangle - Sam Collier
 */
-#ifndef  TRIANGLEH
+#ifndef TRIANGLEH
 #define TRIANGLEH
 
 #include "Hitable.cuh"
@@ -30,7 +30,7 @@ __device__ bool Triangle::hit(const Ray &r, float tMin, float tMax, Intersect &r
 		double a = dot(cross(v1 - v0, inter - v0), normal);
 		double b = dot(cross(v2 - v1, inter - v1), normal);
 		double c = dot(cross(v0 - v2, inter - v2), normal);
-		if (a > 0  && b > 0  && c > 0) //Intersect!
+		if (a > 0  &&b > 0  &&c > 0) //Intersect!
 		{
 			rec.t = distance;
 			rec.p = r.pointAtParameter(rec.t);

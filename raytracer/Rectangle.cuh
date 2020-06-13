@@ -1,3 +1,6 @@
+/*
+	Rectangle - Sam Collier
+*/
 #ifndef RECTH
 #define RECTH
 #include "Surface.cuh"
